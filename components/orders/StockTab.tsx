@@ -107,7 +107,13 @@ function SellerCard({ seller, isSuperAdmin, dirty, onChange }: {
               >
                 <View style={{ flex: 1, marginRight: 10 }}>
                   <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '600' }} numberOfLines={2}>
-                    {sp.productName}{sp.productFlavor ? ` · ${sp.productFlavor}` : ''}{sp.productWeight ? ` · ${sp.productWeight}g` : ''}
+                    {[
+                      sp.productName,
+                      sp.productFlavor,
+                      sp.productWeight ? `${sp.productWeight}гр.` : null,
+                      sp.productPuffs  ? `${sp.productPuffs}k`   : null,
+                      sp.productCount  ? `${sp.productCount}бр.` : null,
+                    ].filter(Boolean).join(' ')}
                   </Text>
                 </View>
                 <StockCell value={current} onChange={(v) => onChange(sp.productId, v)} canEdit={isSuperAdmin} />

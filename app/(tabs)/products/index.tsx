@@ -227,7 +227,7 @@ export default function ProductsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <AppHeader title="Продукти" />
+        <AppHeader title="Продукти" icon="cube" />
 
         <View style={{ paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#fff', ...shadow.sm }}>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>

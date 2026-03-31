@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 import api, { TOKEN_KEY, unauthorizedEmitter } from '@/services/api';
+import { registerPushToken, unregisterPushToken } from '@/services/notifications';
 import type { User } from '@/types';
 
 interface AuthState {
@@ -53,6 +54,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         await SecureStore.setItemAsync(TOKEN_KEY, data.token);
         await SecureStore.setItemAsync('auth_user', JSON.stringify(data.user));
         set({ token: data.token, user: data.user });
+        registerPushToken().catch(console.error);
         router.replace('/(tabs)/orders');
       } finally {
         set({ isLoading: false });
@@ -60,6 +62,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
     },
 
     logout: async () => {
+      await unregisterPushToken().catch(console.error);
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       await SecureStore.deleteItemAsync('auth_user');
       set({ token: null, user: null });

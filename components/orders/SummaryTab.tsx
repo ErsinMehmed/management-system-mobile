@@ -67,7 +67,7 @@ function TableHeader({ withSuperAdmin }: { withSuperAdmin?: boolean }) {
   return (
     <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#F7F8FC' }}>
       <Text style={{ ...h, width: COL_PRODUCT }}>ПРОДУКТ</Text>
-      <Text style={{ ...h, width: COL_NUM, textAlign: 'right' }}>БР.</Text>
+      <Text style={{ ...h, width: COL_NUM, textAlign: 'right' }}>БРОЙ</Text>
       <Text style={{ ...h, width: COL_VAL, textAlign: 'right' }}>ОБОРОТ</Text>
       <Text style={{ ...h, width: COL_VAL, textAlign: 'right' }}>ДОСТ.</Text>
       {withSuperAdmin && <Text style={{ ...h, width: COL_VAL, textAlign: 'right' }}>ХОНОРАР</Text>}
@@ -85,13 +85,13 @@ function TableRow({ item, withSuperAdmin, last, productCost }: { item: any; with
   return (
     <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 11, borderBottomWidth: last ? 0 : 1, borderBottomColor: '#F4F4F8', alignItems: 'center' }}>
       <Text style={{ width: COL_PRODUCT, fontSize: 12, fontWeight: '500', color: '#1C1C2E' }} numberOfLines={1} ellipsizeMode="tail">{productTitle(item.product)}</Text>
-      <Text style={{ width: COL_NUM, fontSize: 12, color: '#52527A', textAlign: 'right' }}>{item.totalQuantity}</Text>
-      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: '#1C1C2E', textAlign: 'right' }}>{formatCurrency(item.totalRevenue, 0)}</Text>
-      <Text style={{ width: COL_VAL, fontSize: 12, color: '#A0A0BE', textAlign: 'right' }}>{item.totalDelivery > 0 ? formatCurrency(item.totalDelivery, 0) : '—'}</Text>
-      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: item.unpaidCount === 0 ? '#16A34A' : '#F59E0B', textAlign: 'right' }}>{formatCurrency(item.totalPayout, 0)}</Text>}
-      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, color: distributorPayout > 0 ? '#F59E0B' : '#A0A0BE', textAlign: 'right' }}>{distributorPayout > 0 ? formatCurrency(distributorPayout, 0) : '—'}</Text>}
-      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: '#6366F1', textAlign: 'right' }}>{formatCurrency(neto, 0)}</Text>}
-      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: profit >= 0 ? '#16A34A' : '#EF4444', textAlign: 'right' }}>{formatCurrency(profit, 0)}</Text>}
+      <Text style={{ width: COL_NUM, fontSize: 12, color: '#52527A', textAlign: 'right' }}>{item.totalQuantity} бр.</Text>
+      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: '#1C1C2E', textAlign: 'right' }}>{formatCurrency(item.totalRevenue)}</Text>
+      <Text style={{ width: COL_VAL, fontSize: 12, color: '#A0A0BE', textAlign: 'right' }}>{item.totalDelivery > 0 ? formatCurrency(item.totalDelivery) : '—'}</Text>
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: item.unpaidCount === 0 ? '#16A34A' : '#F59E0B', textAlign: 'right' }}>{formatCurrency(item.totalPayout)}</Text>}
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, color: distributorPayout > 0 ? '#F59E0B' : '#A0A0BE', textAlign: 'right' }}>{distributorPayout > 0 ? formatCurrency(distributorPayout) : '—'}</Text>}
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: '#6366F1', textAlign: 'right' }}>{formatCurrency(neto)}</Text>}
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: profit >= 0 ? '#16A34A' : '#EF4444', textAlign: 'right' }}>{formatCurrency(profit)}</Text>}
     </View>
   );
 }
@@ -102,12 +102,12 @@ function TotalRow({ seller, withSuperAdmin, grandProfit }: { seller: any; withSu
     <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 11, backgroundColor: '#F7F8FC', alignItems: 'center' }}>
       <Text style={{ width: COL_PRODUCT, fontSize: 12, fontWeight: '800', color: '#A0A0BE' }}>Общо</Text>
       <Text style={{ width: COL_NUM }} />
-      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: '#1C1C2E', textAlign: 'right' }}>{formatCurrency(seller.sellerTotal, 0)}</Text>
-      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: '#A0A0BE', textAlign: 'right' }}>{seller.sellerDelivery > 0 ? formatCurrency(seller.sellerDelivery, 0) : '—'}</Text>
-      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: seller.sellerUnpaidCount === 0 ? '#16A34A' : '#F59E0B', textAlign: 'right' }}>{formatCurrency(seller.sellerPayout, 0)}</Text>}
-      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: (seller.sellerDistributorPayout ?? 0) > 0 ? '#F59E0B' : '#A0A0BE', textAlign: 'right' }}>{(seller.sellerDistributorPayout ?? 0) > 0 ? formatCurrency(seller.sellerDistributorPayout, 0) : '—'}</Text>}
-      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: '#6366F1', textAlign: 'right' }}>{formatCurrency(neto, 0)}</Text>}
-      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: (grandProfit ?? 0) >= 0 ? '#16A34A' : '#EF4444', textAlign: 'right' }}>{formatCurrency(grandProfit ?? 0, 0)}</Text>}
+      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: '#1C1C2E', textAlign: 'right' }}>{formatCurrency(seller.sellerTotal)}</Text>
+      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: '#A0A0BE', textAlign: 'right' }}>{seller.sellerDelivery > 0 ? formatCurrency(seller.sellerDelivery) : '—'}</Text>
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: seller.sellerUnpaidCount === 0 ? '#16A34A' : '#F59E0B', textAlign: 'right' }}>{formatCurrency(seller.sellerPayout)}</Text>}
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: (seller.sellerDistributorPayout ?? 0) > 0 ? '#F59E0B' : '#A0A0BE', textAlign: 'right' }}>{(seller.sellerDistributorPayout ?? 0) > 0 ? formatCurrency(seller.sellerDistributorPayout) : '—'}</Text>}
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: '#6366F1', textAlign: 'right' }}>{formatCurrency(neto)}</Text>}
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: (grandProfit ?? 0) >= 0 ? '#16A34A' : '#EF4444', textAlign: 'right' }}>{formatCurrency(grandProfit ?? 0)}</Text>}
     </View>
   );
 }
@@ -117,8 +117,8 @@ function SellerTotalRow({ grandTotal, grandDelivery }: { grandTotal: number; gra
     <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 11, backgroundColor: '#F7F8FC', alignItems: 'center' }}>
       <Text style={{ width: COL_PRODUCT, fontSize: 12, fontWeight: '800', color: '#A0A0BE' }}>Общо</Text>
       <Text style={{ width: COL_NUM }} />
-      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: '#6366F1', textAlign: 'right' }}>{formatCurrency(grandTotal, 0)}</Text>
-      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: '#A0A0BE', textAlign: 'right' }}>{grandDelivery > 0 ? formatCurrency(grandDelivery, 0) : '—'}</Text>
+      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: '#6366F1', textAlign: 'right' }}>{formatCurrency(grandTotal)}</Text>
+      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: '#A0A0BE', textAlign: 'right' }}>{grandDelivery > 0 ? formatCurrency(grandDelivery) : '—'}</Text>
     </View>
   );
 }

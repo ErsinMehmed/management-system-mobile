@@ -421,7 +421,7 @@ export default function DashboardScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <AppHeader title="Табло" />
+        <AppHeader title="Табло" icon="home" />
 
         <ScrollView
           contentContainerStyle={{ padding: 16, paddingBottom: 24 }}

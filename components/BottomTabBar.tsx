@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, shadow, gradients } from '@/constants/theme';
+import { useAuthStore } from '@/store/authStore';
 
 const TABS = [
   {
@@ -152,11 +153,14 @@ export default function BottomTabBar() {
   const pathname  = usePathname();
   const insets    = useSafeAreaInsets();
   const paddingBottom = Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 0);
+  const isSeller  = useAuthStore((s) => s.user?.role === 'Seller');
 
   const isActive = (route: string) => {
     const clean = route.replace('/(tabs)', '');
     return pathname === clean || pathname.startsWith(clean + '/');
   };
+
+  if (isSeller) return null;
 
   const left  = TABS.filter((t) => !('center' in t && t.center)).slice(0, 2);
   const right = TABS.filter((t) => !('center' in t && t.center)).slice(2);

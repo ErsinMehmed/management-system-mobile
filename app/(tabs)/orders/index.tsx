@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Pusher from 'pusher-js';
 import { colors, shadow } from '@/constants/theme';
 import { useClientOrderStore } from '@/store/clientOrderStore';
 import { useAuthStore } from '@/store/authStore';
@@ -20,8 +21,8 @@ import RejectionModal from '@/components/orders/RejectionModal';
 const ALL_TABS = [
   { key: 'orders',  label: 'Заявки',     icon: 'receipt-outline',   activeIcon: 'receipt',    roles: null },
   { key: 'summary', label: 'Обобщение',  icon: 'bar-chart-outline', activeIcon: 'bar-chart',  roles: null },
-  { key: 'history', label: 'История',    icon: 'time-outline',      activeIcon: 'time',       roles: ['Admin', 'Super Admin'] },
-  { key: 'stock',   label: 'Наличности', icon: 'cube-outline',      activeIcon: 'cube',       roles: ['Admin', 'Super Admin'] },
+  { key: 'history', label: 'История',    icon: 'time-outline',      activeIcon: 'time',       roles: null },
+  { key: 'stock',   label: 'Наличности', icon: 'cube-outline',      activeIcon: 'cube',       roles: null },
   { key: 'clients', label: 'Клиенти',    icon: 'people-outline',    activeIcon: 'people',     roles: ['Super Admin'] },
 ] as const;
 
@@ -43,15 +44,29 @@ export default function OrdersScreen() {
   const initDone = useRef(false);
 
   const isSuperAdmin = user?.role === 'Super Admin';
-  const isAdmin = user?.role === 'Admin' || isSuperAdmin;
   const TABS = ALL_TABS.filter((t) => !t.roles || t.roles.includes(user?.role as any));
 
   useEffect(() => {
     loadOrders(1);
     loadSummary();
-    if (isAdmin) loadHistory();
-    if (isAdmin) loadStock();
+    loadHistory();
+    loadStock();
     if (isSuperAdmin) loadClients(1, '', true);
+  }, []);
+
+  useEffect(() => {
+    const pusher = new Pusher(process.env.EXPO_PUBLIC_PUSHER_KEY!, {
+      cluster: process.env.EXPO_PUBLIC_PUSHER_CLUSTER!,
+    });
+    const channel = pusher.subscribe('client-orders');
+    channel.bind('order-event', () => {
+      loadOrders(1);
+    });
+    return () => {
+      channel.unbind_all();
+      pusher.unsubscribe('client-orders');
+      pusher.disconnect();
+    };
   }, []);
 
   const handleTabPress = (key: TabKey, index: number) => {
@@ -78,7 +93,7 @@ export default function OrdersScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-      <AppHeader title="Клиентски поръчки" />
+      <AppHeader title="Клиентски поръчки" icon="receipt" />
 
       {/* Sub-tab bar */}
       <View style={{ backgroundColor: '#fff', paddingHorizontal: 20, paddingTop: 4, paddingBottom: 0, ...shadow.sm }}>

@@ -5,21 +5,43 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.yourcompany.managementsystem"
+      "bundleIdentifier": "com.erso99.managementsystem",
+      "buildNumber": "1"
     },
     "android": {
-      "package": "com.yourcompany.managementsystem"
+      "package": "com.erso99.managementsystem",
+      "versionCode": 1
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#6366F1"
+        }
+      ]
     ],
     "scheme": "management-system",
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7e1dc26a-cf9d-402b-ab64-8a78aa83fa99"
+      }
+    },
+    "owner": "erso99"
   }
 }
