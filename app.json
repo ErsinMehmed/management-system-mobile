@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "ManagementSystem",
+    "slug": "management-system",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.yourcompany.managementsystem"
+    },
+    "android": {
+      "package": "com.yourcompany.managementsystem"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "scheme": "management-system",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
