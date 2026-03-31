@@ -14,13 +14,13 @@ import type { Product, UserListItem } from '@/types';
 interface Props { visible: boolean; onClose: () => void; onSuccess?: () => void }
 
 function Field({
-  label, value, onChangeText, placeholder, keyboardType, multiline,
+  label, value, onChangeText, placeholder, keyboardType, multiline, disabled,
 }: {
   label: string; value: string; onChangeText: (v: string) => void;
-  placeholder?: string; keyboardType?: any; multiline?: boolean;
+  placeholder?: string; keyboardType?: any; multiline?: boolean; disabled?: boolean;
 }) {
   return (
-    <View style={{ gap: 6 }}>
+    <View style={{ gap: 6, opacity: disabled ? 0.4 : 1 }}>
       <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4 }}>{label}</Text>
       <TextInput
         style={{
@@ -37,22 +37,23 @@ function Field({
         placeholderTextColor={colors.textMuted}
         keyboardType={keyboardType}
         multiline={multiline}
+        editable={!disabled}
       />
     </View>
   );
 }
 
-function ProductPicker({ label, products, value, onSelect }: {
-  label: string; products: Product[]; value: string; onSelect: (id: string) => void;
+function ProductPicker({ label, products, value, onSelect, disabled }: {
+  label: string; products: Product[]; value: string; onSelect: (id: string) => void; disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const selected = products.find((p) => p._id === value);
 
   return (
-    <View style={{ gap: 6 }}>
+    <View style={{ gap: 6, opacity: disabled ? 0.4 : 1 }}>
       <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4 }}>{label}</Text>
       <TouchableOpacity
-        onPress={() => setOpen(true)}
+        onPress={() => !disabled && setOpen(true)}
         style={{
           backgroundColor: colors.bgInput, borderRadius: 14,
           paddingHorizontal: 14, paddingVertical: 13,
@@ -230,14 +231,14 @@ export default function CreateOrderModal({ visible, onClose, onSuccess }: Props)
 
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <View style={{ flex: 1 }}>
-                <Field label="БРОЙКИ *" value={orderData.quantity} onChangeText={(v) => setOrderData({ quantity: v })} placeholder="1" keyboardType="numeric" />
+                <Field label="БРОЙКИ *" value={orderData.quantity} onChangeText={(v) => setOrderData({ quantity: v })} placeholder="1" keyboardType="numeric" disabled={!orderData.product} />
               </View>
               <View style={{ flex: 1 }}>
-                <Field label="ЦЕНА (€) *" value={orderData.price} onChangeText={(v) => setOrderData({ price: v })} placeholder="0.00" keyboardType="numeric" />
+                <Field label="ЦЕНА (€) *" value={orderData.price} onChangeText={(v) => setOrderData({ price: v })} placeholder="0.00" keyboardType="numeric" disabled={!orderData.product} />
               </View>
             </View>
 
-            <ProductPicker label="ВТОРИ ПРОДУКТ" products={products} value={orderData.product2} onSelect={(id) => setOrderData({ product2: id, quantity2: id ? '1' : '', price2: '' })} />
+            <ProductPicker label="ВТОРИ ПРОДУКТ" products={products} value={orderData.product2} onSelect={(id) => setOrderData({ product2: id, quantity2: id ? '1' : '', price2: '' })} disabled={!orderData.product} />
 
             {orderData.product2 ? (
               <View style={{ flexDirection: 'row', gap: 12 }}>

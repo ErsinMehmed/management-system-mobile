@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, ActivityIndicator,
-  Alert, Modal, TextInput, Image,
+  Alert, Modal, TextInput, Image, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 
 import { useClientOrderStore } from '@/store/clientOrderStore';
@@ -423,7 +423,10 @@ export default function OrderDetailScreen() {
 
           <View style={{ padding: 20, gap: 16 }}>
             {/* Phone + badges */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              onPress={() => Linking.openURL(`tel:${order.phone}`)}
+            >
               <Ionicons name="call-outline" size={16} color="#A0A0BE" />
               <Text style={{ fontSize: 17, fontWeight: '800', color: '#1C1C2E', flex: 1 }}>
                 {order.phone}
@@ -433,7 +436,37 @@ export default function OrderDetailScreen() {
                   <Text style={{ fontSize: 10, fontWeight: '800', color: '#A16207' }}>НОВ КЛИЕНТ</Text>
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
+
+            {/* Contact method icons */}
+            {order.contactMethod === 'viber' && (
+              <TouchableOpacity
+                onPress={() => Linking.openURL(`viber://chat?number=${order.phone}`)}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 10,
+                  backgroundColor: '#7360F218', borderRadius: 14,
+                  paddingHorizontal: 16, paddingVertical: 12,
+                  borderWidth: 1.5, borderColor: '#7360F2',
+                }}
+              >
+                <FontAwesome5 name="viber" size={20} color="#7360F2" />
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#7360F2' }}>Отвори във Viber</Text>
+              </TouchableOpacity>
+            )}
+            {order.contactMethod === 'whatsapp' && (
+              <TouchableOpacity
+                onPress={() => Linking.openURL(`whatsapp://send?phone=${order.phone}`)}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 10,
+                  backgroundColor: '#25D36618', borderRadius: 14,
+                  paddingHorizontal: 16, paddingVertical: 12,
+                  borderWidth: 1.5, borderColor: '#25D366',
+                }}
+              >
+                <FontAwesome5 name="whatsapp" size={20} color="#25D366" />
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#25D366' }}>Отвори в WhatsApp</Text>
+              </TouchableOpacity>
+            )}
 
             {/* Status row */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>

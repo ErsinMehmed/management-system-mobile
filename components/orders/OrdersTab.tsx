@@ -161,7 +161,7 @@ function OrderCard({ order, onRejection }: { order: Order; onRejection: (id: str
           backgroundColor: '#F7F8FC', borderRadius: 12,
           padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10,
         }}>
-          <ProductThumb imageUrl={(order.product as any)?.image_url} size={40} />
+          <ProductThumb imageUrl={order.product?.image_url} size={40} />
           <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#1C1C2E' }} numberOfLines={1}>
             {productTitle(order.product)}
           </Text>
@@ -179,7 +179,7 @@ function OrderCard({ order, onRejection }: { order: Order; onRejection: (id: str
             backgroundColor: '#F7F8FC', borderRadius: 12,
             padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10,
           }}>
-            <ProductThumb imageUrl={(order.secondProduct.product as any)?.image_url} size={40} />
+            <ProductThumb imageUrl={order.secondProduct.product?.image_url} size={40} />
             <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#1C1C2E' }} numberOfLines={1}>
               {productTitle(order.secondProduct.product)}
             </Text>
@@ -205,7 +205,7 @@ function OrderCard({ order, onRejection }: { order: Order; onRejection: (id: str
           {order.assignedTo?.name && (
             <View>
               <Text style={{ fontSize: 11, color: '#A0A0BE', fontWeight: '500', marginBottom: 2 }}>Доставчик</Text>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#1C1C2E' }}>{order.assignedTo.name}</Text>
+               <Text style={{ fontSize: 14, fontWeight: '700', color: '#1C1C2E' }}>{order.assignedTo.name}</Text>
             </View>
           )}
         </View>

@@ -19,6 +19,7 @@ export interface ProductRef {
   flavor?: string;
   puffs?: number;
   count?: number;
+  image_url?: string;
 }
 
 export interface Product extends ProductRef {

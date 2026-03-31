@@ -56,7 +56,7 @@ export default function OrdersScreen() {
 
   const handleTabPress = (key: TabKey, index: number) => {
     setActiveTab(key);
-    const x = TABS.slice(0, index).reduce((sum, t) => sum + (tabWidths.current[t.key] ?? 80), 0);
+    const x = TABS.slice(0, index).reduce((sum, t) => sum + (tabWidths.current[t.key] ?? 80) + 4, 0);
     const w = tabWidths.current[key] ?? 80;
     Animated.parallel([
       Animated.spring(indicatorX, { toValue: x, useNativeDriver: false, damping: 20, stiffness: 200 }),
