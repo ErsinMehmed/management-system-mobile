@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(head -50 app/api/client-orders/[id]/route.js)",
-      "Bash(npm --version)",
-      "Bash(npx expo:*)"
-    ]
-  }
-}
