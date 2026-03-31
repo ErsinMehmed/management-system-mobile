@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
-import { colors } from '@/constants/theme';
 import { useClientOrderStore } from '@/store/clientOrderStore';
 import { useAuthStore } from '@/store/authStore';
 import { formatCurrency, productTitle } from '@/utils/format';
@@ -14,13 +13,13 @@ import api from '@/services/api';
 type Preset = '24h' | 'today' | 'yesterday' | 'week' | 'month' | 'all' | 'custom';
 
 const PRESETS: { key: Preset; label: string }[] = [
-  { key: '24h',       label: '24 часа' },
+  { key: '24h',       label: '24ч' },
   { key: 'today',     label: 'Днес' },
   { key: 'yesterday', label: 'Вчера' },
-  { key: 'week',      label: 'Тази седмица' },
-  { key: 'month',     label: 'Този месец' },
+  { key: 'week',      label: 'Седмица' },
+  { key: 'month',     label: 'Месец' },
   { key: 'all',       label: 'Всички' },
-  { key: 'custom',    label: '📅 По избор' },
+  { key: 'custom',    label: 'По избор' },
 ];
 
 const PERIOD_LABELS: Record<Preset, string> = {
@@ -35,40 +34,106 @@ const PERIOD_LABELS: Record<Preset, string> = {
 
 function getRange(preset: Preset): { from: string | null; to: string | null } {
   const now = dayjs();
-  if (preset === '24h') return { from: now.subtract(24, 'hour').toISOString(), to: null };
-  if (preset === 'today') return { from: now.startOf('day').toISOString(), to: null };
+  if (preset === '24h')       return { from: now.subtract(24, 'hour').toISOString(), to: null };
+  if (preset === 'today')     return { from: now.startOf('day').toISOString(), to: null };
   if (preset === 'yesterday') return { from: now.subtract(1, 'day').startOf('day').toISOString(), to: now.subtract(1, 'day').endOf('day').toISOString() };
-  if (preset === 'week') return { from: now.startOf('week').toISOString(), to: null };
-  if (preset === 'month') return { from: now.startOf('month').toISOString(), to: null };
-  if (preset === 'all') return { from: null, to: null };
+  if (preset === 'week')      return { from: now.startOf('week').toISOString(), to: null };
+  if (preset === 'month')     return { from: now.startOf('month').toISOString(), to: null };
   return { from: null, to: null };
 }
 
-function StatCard({ icon, label, value, color }: { icon: string; label: string; value: string; color?: string }) {
+// ─── Stat card ────────────────────────────────────────────────────────────────
+
+function StatCard({ label, value, color, icon }: { label: string; value: string; color: string; icon: string }) {
   return (
-    <View style={{
-      flex: 1, backgroundColor: colors.bgCard, borderRadius: 14,
-      padding: 12, borderWidth: 1, borderColor: colors.border, gap: 6,
-    }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <Text style={{ fontSize: 14 }}>{icon}</Text>
-        <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '600' }}>{label}</Text>
+    <View style={{ flex: 1, backgroundColor: '#fff', borderRadius: 16, padding: 14, gap: 8 }}>
+      <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: `${color}18`, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={icon as any} size={17} color={color} />
       </View>
-      <Text style={{ fontSize: 16, fontWeight: '800', color: color ?? colors.textPrimary }}>{value}</Text>
+      <Text style={{ fontSize: 11, color: '#A0A0BE', fontWeight: '600', letterSpacing: 0.3 }}>{label.toUpperCase()}</Text>
+      <Text style={{ fontSize: 17, fontWeight: '800', color: '#1C1C2E', letterSpacing: -0.5 }}>{value}</Text>
     </View>
   );
 }
+
+// ─── Table ────────────────────────────────────────────────────────────────────
+
+const COL_PRODUCT = 160;
+const COL_NUM     = 52;
+const COL_VAL     = 76;
+
+function TableHeader({ withSuperAdmin }: { withSuperAdmin?: boolean }) {
+  const h = { fontSize: 10, fontWeight: '700' as const, color: '#A0A0BE', letterSpacing: 0.5 };
+  return (
+    <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#F7F8FC' }}>
+      <Text style={{ ...h, width: COL_PRODUCT }}>ПРОДУКТ</Text>
+      <Text style={{ ...h, width: COL_NUM, textAlign: 'right' }}>БР.</Text>
+      <Text style={{ ...h, width: COL_VAL, textAlign: 'right' }}>ОБОРОТ</Text>
+      <Text style={{ ...h, width: COL_VAL, textAlign: 'right' }}>ДОСТ.</Text>
+      {withSuperAdmin && <Text style={{ ...h, width: COL_VAL, textAlign: 'right' }}>ХОНОРАР</Text>}
+      {withSuperAdmin && <Text style={{ ...h, width: COL_VAL, textAlign: 'right' }}>ДИСТРИБ.</Text>}
+      {withSuperAdmin && <Text style={{ ...h, width: COL_VAL, textAlign: 'right' }}>НЕТО</Text>}
+      {withSuperAdmin && <Text style={{ ...h, width: COL_VAL, textAlign: 'right' }}>ПЕЧАЛБА</Text>}
+    </View>
+  );
+}
+
+function TableRow({ item, withSuperAdmin, last, productCost }: { item: any; withSuperAdmin?: boolean; last?: boolean; productCost?: number }) {
+  const distributorPayout = item.totalDistributorPayout ?? 0;
+  const neto    = item.totalRevenue - item.totalPayout - distributorPayout;
+  const profit  = neto - (productCost ?? 0);
+  return (
+    <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 11, borderBottomWidth: last ? 0 : 1, borderBottomColor: '#F4F4F8', alignItems: 'center' }}>
+      <Text style={{ width: COL_PRODUCT, fontSize: 12, fontWeight: '500', color: '#1C1C2E' }} numberOfLines={1} ellipsizeMode="tail">{productTitle(item.product)}</Text>
+      <Text style={{ width: COL_NUM, fontSize: 12, color: '#52527A', textAlign: 'right' }}>{item.totalQuantity}</Text>
+      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: '#1C1C2E', textAlign: 'right' }}>{formatCurrency(item.totalRevenue, 0)}</Text>
+      <Text style={{ width: COL_VAL, fontSize: 12, color: '#A0A0BE', textAlign: 'right' }}>{item.totalDelivery > 0 ? formatCurrency(item.totalDelivery, 0) : '—'}</Text>
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: item.unpaidCount === 0 ? '#16A34A' : '#F59E0B', textAlign: 'right' }}>{formatCurrency(item.totalPayout, 0)}</Text>}
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, color: distributorPayout > 0 ? '#F59E0B' : '#A0A0BE', textAlign: 'right' }}>{distributorPayout > 0 ? formatCurrency(distributorPayout, 0) : '—'}</Text>}
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: '#6366F1', textAlign: 'right' }}>{formatCurrency(neto, 0)}</Text>}
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: profit >= 0 ? '#16A34A' : '#EF4444', textAlign: 'right' }}>{formatCurrency(profit, 0)}</Text>}
+    </View>
+  );
+}
+
+function TotalRow({ seller, withSuperAdmin, grandProfit }: { seller: any; withSuperAdmin?: boolean; grandProfit?: number }) {
+  const neto = seller.sellerTotal - seller.sellerPayout - (seller.sellerDistributorPayout ?? 0);
+  return (
+    <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 11, backgroundColor: '#F7F8FC', alignItems: 'center' }}>
+      <Text style={{ width: COL_PRODUCT, fontSize: 12, fontWeight: '800', color: '#A0A0BE' }}>Общо</Text>
+      <Text style={{ width: COL_NUM }} />
+      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: '#1C1C2E', textAlign: 'right' }}>{formatCurrency(seller.sellerTotal, 0)}</Text>
+      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: '#A0A0BE', textAlign: 'right' }}>{seller.sellerDelivery > 0 ? formatCurrency(seller.sellerDelivery, 0) : '—'}</Text>
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: seller.sellerUnpaidCount === 0 ? '#16A34A' : '#F59E0B', textAlign: 'right' }}>{formatCurrency(seller.sellerPayout, 0)}</Text>}
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: (seller.sellerDistributorPayout ?? 0) > 0 ? '#F59E0B' : '#A0A0BE', textAlign: 'right' }}>{(seller.sellerDistributorPayout ?? 0) > 0 ? formatCurrency(seller.sellerDistributorPayout, 0) : '—'}</Text>}
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: '#6366F1', textAlign: 'right' }}>{formatCurrency(neto, 0)}</Text>}
+      {withSuperAdmin && <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: (grandProfit ?? 0) >= 0 ? '#16A34A' : '#EF4444', textAlign: 'right' }}>{formatCurrency(grandProfit ?? 0, 0)}</Text>}
+    </View>
+  );
+}
+
+function SellerTotalRow({ grandTotal, grandDelivery }: { grandTotal: number; grandDelivery: number }) {
+  return (
+    <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 11, backgroundColor: '#F7F8FC', alignItems: 'center' }}>
+      <Text style={{ width: COL_PRODUCT, fontSize: 12, fontWeight: '800', color: '#A0A0BE' }}>Общо</Text>
+      <Text style={{ width: COL_NUM }} />
+      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '800', color: '#6366F1', textAlign: 'right' }}>{formatCurrency(grandTotal, 0)}</Text>
+      <Text style={{ width: COL_VAL, fontSize: 12, fontWeight: '700', color: '#A0A0BE', textAlign: 'right' }}>{grandDelivery > 0 ? formatCurrency(grandDelivery, 0) : '—'}</Text>
+    </View>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function SummaryTab() {
   const { summary, isSummaryLoading, loadSummary, markSellerAsPaid } = useClientOrderStore();
   const user = useAuthStore((s) => s.user);
   const isSuperAdmin = user?.role === 'Super Admin';
-  const isAdmin = user?.role === 'Admin' || isSuperAdmin;
 
-  const [preset, setPreset] = useState<Preset>('today');
+  const [preset, setPreset]         = useState<Preset>('today');
   const [customFrom, setCustomFrom] = useState('');
-  const [customTo, setCustomTo] = useState('');
-  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [customTo, setCustomTo]     = useState('');
+  const [aiInsight, setAiInsight]   = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const applyFilter = (p: Preset, from?: string, to?: string) => {
@@ -112,59 +177,54 @@ export default function SummaryTab() {
     );
   };
 
-  const grandCost = summary?.bySeller && summary?.sellers
-    ? summary.sellers.reduce((s: number, sel: any) => s + sel.items.reduce((si: number, item: any) => si + (item.product?.price ?? 0) * item.totalQuantity, 0), 0)
-    : 0;
   const grandDistributorPayout = (summary as any)?.grandDistributorPayout ?? 0;
   const grandNetRevenue = ((summary as any)?.grandTotal ?? 0) - ((summary as any)?.grandPayout ?? 0) - grandDistributorPayout;
-  const grandProfit = grandNetRevenue - grandCost;
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 32 }}>
-      {/* Filter presets */}
-      <View style={{ backgroundColor: colors.bgCard, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: colors.border, gap: 12 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Ionicons name="filter" size={14} color={colors.primary} />
-          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textPrimary }}>Период</Text>
-        </View>
+    <ScrollView style={{ flex: 1, backgroundColor: '#F5F6FA' }} contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}>
+
+      {/* ── PERIOD FILTER ── */}
+      <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 16, gap: 12 }}>
+        <Text style={{ fontSize: 12, fontWeight: '700', color: '#A0A0BE', letterSpacing: 0.5 }}>ПЕРИОД</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {PRESETS.map(({ key, label }) => {
-            const isActive = preset === key;
+            const active = preset === key;
             return (
               <TouchableOpacity
                 key={key}
                 onPress={() => handlePreset(key)}
                 style={{
-                  paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
-                  backgroundColor: isActive ? colors.primary : colors.bgElevated,
-                  borderWidth: 1, borderColor: isActive ? colors.primary : colors.border,
+                  paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+                  backgroundColor: active ? '#6366F1' : '#F4F4F8',
                 }}
               >
-                <Text style={{ fontSize: 12, fontWeight: '600', color: isActive ? '#fff' : colors.textSecondary }}>{label}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: active ? '#fff' : '#52527A' }}>
+                  {label}
+                </Text>
               </TouchableOpacity>
             );
           })}
         </View>
 
         {preset === 'custom' && (
-          <View style={{ gap: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
+          <View style={{ gap: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F0F0F8' }}>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '600' }}>ОТ (YYYY-MM-DD)</Text>
+              <View style={{ flex: 1, gap: 6 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#A0A0BE', letterSpacing: 0.4 }}>ОТ</Text>
                 <TextInput
-                  style={{ backgroundColor: colors.bgElevated, borderRadius: 10, padding: 10, color: colors.textPrimary, fontSize: 13, borderWidth: 1, borderColor: colors.border }}
+                  style={{ backgroundColor: '#F7F8FC', borderRadius: 12, padding: 11, color: '#1C1C2E', fontSize: 13, borderWidth: 1.5, borderColor: '#EBEBF5' }}
                   placeholder="2026-01-01"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor="#C0C0D8"
                   value={customFrom}
                   onChangeText={setCustomFrom}
                 />
               </View>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '600' }}>ДО (YYYY-MM-DD)</Text>
+              <View style={{ flex: 1, gap: 6 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#A0A0BE', letterSpacing: 0.4 }}>ДО</Text>
                 <TextInput
-                  style={{ backgroundColor: colors.bgElevated, borderRadius: 10, padding: 10, color: colors.textPrimary, fontSize: 13, borderWidth: 1, borderColor: colors.border }}
+                  style={{ backgroundColor: '#F7F8FC', borderRadius: 12, padding: 11, color: '#1C1C2E', fontSize: 13, borderWidth: 1.5, borderColor: '#EBEBF5' }}
                   placeholder="2026-12-31"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor="#C0C0D8"
                   value={customTo}
                   onChangeText={setCustomTo}
                 />
@@ -172,7 +232,7 @@ export default function SummaryTab() {
             </View>
             <TouchableOpacity
               onPress={() => applyFilter('custom', customFrom || undefined, customTo || undefined)}
-              style={{ backgroundColor: colors.primary, borderRadius: 10, padding: 10, alignItems: 'center' }}
+              style={{ backgroundColor: '#6366F1', borderRadius: 12, paddingVertical: 12, alignItems: 'center' }}
             >
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Приложи</Text>
             </TouchableOpacity>
@@ -180,174 +240,176 @@ export default function SummaryTab() {
         )}
       </View>
 
+      {/* ── STATES ── */}
       {isSummaryLoading ? (
-        <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-          <ActivityIndicator color={colors.primary} />
-          <Text style={{ color: colors.textMuted, marginTop: 10 }}>Зареждане...</Text>
+        <View style={{ alignItems: 'center', paddingVertical: 60, gap: 12 }}>
+          <ActivityIndicator color="#6366F1" size="large" />
+          <Text style={{ color: '#A0A0BE', fontSize: 14 }}>Зареждане...</Text>
         </View>
       ) : !summary ? (
-        <View style={{ alignItems: 'center', paddingVertical: 40, gap: 8 }}>
-          <Text style={{ fontSize: 36 }}>📊</Text>
-          <Text style={{ color: colors.textMuted, fontSize: 14 }}>Избери период за да видиш обобщение</Text>
+        <View style={{ alignItems: 'center', paddingVertical: 60, gap: 10 }}>
+          <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="bar-chart-outline" size={30} color="#6366F1" />
+          </View>
+          <Text style={{ color: '#1C1C2E', fontSize: 15, fontWeight: '700' }}>Избери период</Text>
+          <Text style={{ color: '#A0A0BE', fontSize: 13 }}>Натисни някой от периодите горе</Text>
         </View>
+
       ) : summary.bySeller ? (
-        // Admin/Super Admin view
+        // ── ADMIN / SUPER ADMIN VIEW ──
         <>
-          {/* AI Button */}
+          {/* AI Insight */}
           {(summary as any).grandTotal > 0 && (
-            <View>
-              {aiInsight ? (
-                <View style={{ backgroundColor: `${colors.primary}10`, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: `${colors.primary}20`, gap: 8 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="flash" size={14} color={colors.primary} />
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>AI Обобщение</Text>
+            aiInsight ? (
+              <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 16, gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="flash" size={15} color="#6366F1" />
                   </View>
-                  <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>{aiInsight}</Text>
-                  <TouchableOpacity onPress={() => { setAiInsight(null); handleAiAnalysis(); }}>
-                    <Text style={{ color: colors.textMuted, fontSize: 12 }}>Обнови анализа</Text>
-                  </TouchableOpacity>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#6366F1' }}>AI Обобщение</Text>
                 </View>
-              ) : (
-                <TouchableOpacity
-                  onPress={handleAiAnalysis}
-                  disabled={isAnalyzing}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: `${colors.primary}10`, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: `${colors.primary}20` }}
-                >
-                  {isAnalyzing ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="flash" size={16} color={colors.primary} />}
-                  <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>
+                <Text style={{ color: '#52527A', fontSize: 13, lineHeight: 21 }}>{aiInsight}</Text>
+                <TouchableOpacity onPress={() => { setAiInsight(null); handleAiAnalysis(); }}>
+                  <Text style={{ color: '#A0A0BE', fontSize: 12, fontWeight: '600' }}>Обнови анализа</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={handleAiAnalysis}
+                disabled={isAnalyzing}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 18, padding: 16 }}
+              >
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                  {isAnalyzing
+                    ? <ActivityIndicator size="small" color="#6366F1" />
+                    : <Ionicons name="flash" size={18} color="#6366F1" />
+                  }
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#1C1C2E', fontWeight: '700', fontSize: 14 }}>
                     {isAnalyzing ? 'Анализирам...' : 'AI Обобщение'}
                   </Text>
-                </TouchableOpacity>
-              )}
-            </View>
+                  <Text style={{ color: '#A0A0BE', fontSize: 12, marginTop: 1 }}>Анализ на продажбите за периода</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#C0C0D8" />
+              </TouchableOpacity>
+            )
           )}
 
-          {/* Grand totals */}
+          {/* Grand stat cards */}
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <StatCard icon="📈" label="Общ оборот" value={formatCurrency((summary as any).grandTotal)} color={colors.primary} />
-            <StatCard icon="🚚" label="Доставки" value={formatCurrency((summary as any).sellers?.reduce((s: number, x: any) => s + (x.sellerDelivery ?? 0), 0) ?? 0)} />
+            <StatCard label="Оборот" value={formatCurrency((summary as any).grandTotal)} color="#6366F1" icon="trending-up-outline" />
+            <StatCard
+              label="Доставки"
+              value={formatCurrency((summary as any).sellers?.reduce((s: number, x: any) => s + (x.sellerDelivery ?? 0), 0) ?? 0)}
+              color="#7878A0"
+              icon="car-outline"
+            />
           </View>
 
           {isSuperAdmin && (
             <>
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                <StatCard icon="💰" label="За изплащане" value={formatCurrency((summary as any).grandPayout)} color={colors.rejected} />
-                <StatCard icon="✅" label="Изплатени" value={formatCurrency((summary as any).grandPaidPayout ?? 0)} color={colors.delivered} />
+                <StatCard label="Хонорари" value={formatCurrency((summary as any).grandPayout)} color="#EF4444" icon="cash-outline" />
+                <StatCard label="Изплатени" value={formatCurrency((summary as any).grandPaidPayout ?? 0)} color="#16A34A" icon="checkmark-circle-outline" />
               </View>
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                <StatCard icon="🔷" label="Нето оборот" value={formatCurrency(grandNetRevenue)} color={colors.primaryLight} />
-                <StatCard icon="📊" label="Печалба" value={formatCurrency(grandProfit)} color={colors.delivered} />
+                <StatCard label="Нето" value={formatCurrency(grandNetRevenue)} color="#8B5CF6" icon="analytics-outline" />
+                <StatCard label="Печалба" value={formatCurrency(grandNetRevenue - ((summary as any).sellers?.reduce((s: number, x: any) => s + x.items.reduce((si: number, item: any) => si + (item.product?.price ?? 0) * item.totalQuantity, 0), 0) ?? 0))} color="#16A34A" icon="trending-up-outline" />
               </View>
             </>
           )}
 
           {/* Per seller */}
           {(summary as any).sellers.map((seller: any) => (
-            <View key={seller._id ?? 'unassigned'} style={{ backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
+            <View key={seller._id ?? 'unassigned'} style={{ backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden' }}>
+
               {/* Seller header */}
-              <View style={{ padding: 14, backgroundColor: `${colors.primary}08`, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{seller.sellerName?.charAt(0)?.toUpperCase() ?? '?'}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 14 }}>{seller.sellerName}</Text>
-                    <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-                      {formatCurrency(seller.sellerTotal)}
-                      {isSuperAdmin && ` · ${formatCurrency(seller.sellerPayout)} хонорар`}
-                    </Text>
-                  </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: '#6366F1', fontWeight: '800', fontSize: 15 }}>
+                    {seller.sellerName?.charAt(0)?.toUpperCase() ?? '?'}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#1C1C2E', fontWeight: '700', fontSize: 15 }}>{seller.sellerName}</Text>
+                  <Text style={{ color: '#A0A0BE', fontSize: 12, marginTop: 2 }}>
+                    {formatCurrency(seller.sellerTotal)}
+                    {isSuperAdmin && ` · ${formatCurrency(seller.sellerPayout)} хонорар`}
+                  </Text>
                 </View>
                 {isSuperAdmin && seller._id && (
                   seller.sellerUnpaidCount > 0 ? (
                     <TouchableOpacity
                       onPress={() => handlePayout(seller)}
-                      style={{ backgroundColor: '#F59E0B', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 }}
+                      style={{ backgroundColor: '#F59E0B', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 }}
                     >
                       <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>Изплати</Text>
                     </TouchableOpacity>
                   ) : (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.deliveredBg, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 }}>
-                      <Ionicons name="checkmark-circle" size={13} color={colors.delivered} />
-                      <Text style={{ color: colors.delivered, fontSize: 12, fontWeight: '600' }}>Изплатен</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#DCFCE7', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 }}>
+                      <Ionicons name="checkmark-circle" size={13} color="#16A34A" />
+                      <Text style={{ color: '#16A34A', fontSize: 12, fontWeight: '700' }}>Изплатен</Text>
                     </View>
                   )
                 )}
               </View>
 
-              {/* Products table */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={{ minWidth: isSuperAdmin ? 520 : 320 }}>
-                  {/* Header row */}
-                  <View style={{ flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                    {['Продукт', 'Бр.', 'Оборот', 'Дост.', ...(isSuperAdmin ? ['Хонорар', 'Нето'] : [])].map((h, i) => (
-                      <Text key={i} style={{ flex: i === 0 ? 2 : 1, fontSize: 10, fontWeight: '700', color: colors.textMuted, textAlign: i === 0 ? 'left' : 'right' }}>{h}</Text>
-                    ))}
-                  </View>
+              {/* Divider */}
+              <View style={{ height: 1, backgroundColor: '#F4F4F8' }} />
 
+              {/* Table */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View>
+                  <TableHeader withSuperAdmin={isSuperAdmin} />
                   {seller.items.slice().sort((a: any, b: any) => b.totalRevenue - a.totalRevenue).map((item: any, i: number) => {
-                    const neto = item.totalRevenue - item.totalPayout - (item.totalDistributorPayout ?? 0);
+                    const cost = (item.product?.price ?? 0) * item.totalQuantity;
                     return (
-                      <View key={i} style={{ flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                        <Text style={{ flex: 2, color: colors.textPrimary, fontSize: 12 }} numberOfLines={1}>{productTitle(item.product)}</Text>
-                        <Text style={{ flex: 1, color: colors.textSecondary, fontSize: 12, textAlign: 'right' }}>{item.totalQuantity}</Text>
-                        <Text style={{ flex: 1, color: colors.textPrimary, fontSize: 12, fontWeight: '600', textAlign: 'right' }}>{formatCurrency(item.totalRevenue, 0)}</Text>
-                        <Text style={{ flex: 1, color: colors.textSecondary, fontSize: 12, textAlign: 'right' }}>{item.totalDelivery > 0 ? formatCurrency(item.totalDelivery, 0) : '—'}</Text>
-                        {isSuperAdmin && <Text style={{ flex: 1, color: item.unpaidCount === 0 ? colors.delivered : '#F59E0B', fontSize: 12, fontWeight: '600', textAlign: 'right' }}>{formatCurrency(item.totalPayout, 0)}</Text>}
-                        {isSuperAdmin && <Text style={{ flex: 1, color: colors.primaryLight, fontSize: 12, fontWeight: '600', textAlign: 'right' }}>{formatCurrency(neto, 0)}</Text>}
-                      </View>
+                      <TableRow key={i} item={item} withSuperAdmin={isSuperAdmin} last={i === seller.items.length - 1} productCost={cost} />
                     );
                   })}
-
-                  {/* Total row */}
-                  <View style={{ flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 10, backgroundColor: `${colors.bgElevated}`, borderTopWidth: 1, borderTopColor: colors.border }}>
-                    <Text style={{ flex: 2, color: colors.textMuted, fontSize: 11, fontWeight: '700' }}>ОБЩО</Text>
-                    <Text style={{ flex: 1 }} />
-                    <Text style={{ flex: 1, color: colors.textPrimary, fontSize: 12, fontWeight: '800', textAlign: 'right' }}>{formatCurrency(seller.sellerTotal, 0)}</Text>
-                    <Text style={{ flex: 1, color: colors.textSecondary, fontSize: 12, fontWeight: '700', textAlign: 'right' }}>{seller.sellerDelivery > 0 ? formatCurrency(seller.sellerDelivery, 0) : '—'}</Text>
-                    {isSuperAdmin && <Text style={{ flex: 1, color: seller.sellerUnpaidCount === 0 ? colors.delivered : '#F59E0B', fontSize: 12, fontWeight: '800', textAlign: 'right' }}>{formatCurrency(seller.sellerPayout, 0)}</Text>}
-                    {isSuperAdmin && <Text style={{ flex: 1, color: colors.primaryLight, fontSize: 12, fontWeight: '800', textAlign: 'right' }}>{formatCurrency(seller.sellerTotal - seller.sellerPayout - (seller.sellerDistributorPayout ?? 0), 0)}</Text>}
-                  </View>
+                  <TotalRow
+                    seller={seller}
+                    withSuperAdmin={isSuperAdmin}
+                    grandProfit={seller.items.reduce((acc: number, item: any) => {
+                      const cost = (item.product?.price ?? 0) * item.totalQuantity;
+                      const neto = item.totalRevenue - item.totalPayout - (item.totalDistributorPayout ?? 0);
+                      return acc + neto - cost;
+                    }, 0)}
+                  />
                 </View>
               </ScrollView>
             </View>
           ))}
         </>
+
       ) : (
-        // Seller view
+        // ── SELLER VIEW ──
         <>
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <StatCard icon="📈" label="Общ оборот" value={formatCurrency((summary as any).grandTotal)} color={colors.primary} />
-            <StatCard icon="🚚" label="Доставки" value={formatCurrency((summary as any).grandDelivery ?? 0)} />
-            <StatCard icon="✅" label="Изплатени" value={formatCurrency((summary as any).grandPaidPayout ?? 0)} color={colors.delivered} />
+            <StatCard label="Оборот" value={formatCurrency((summary as any).grandTotal)} color="#6366F1" icon="trending-up-outline" />
+            <StatCard label="Доставки" value={formatCurrency((summary as any).grandDelivery ?? 0)} color="#7878A0" icon="car-outline" />
           </View>
+          <StatCard label="Изплатени" value={formatCurrency((summary as any).grandPaidPayout ?? 0)} color="#16A34A" icon="checkmark-circle-outline" />
 
           {!(summary as any).items?.length ? (
-            <View style={{ alignItems: 'center', paddingVertical: 40, gap: 8 }}>
-              <Text style={{ fontSize: 36 }}>📭</Text>
-              <Text style={{ color: colors.textMuted }}>Няма доставени поръчки</Text>
+            <View style={{ alignItems: 'center', paddingVertical: 40, gap: 10 }}>
+              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#F4F4F8', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="receipt-outline" size={26} color="#A0A0BE" />
+              </View>
+              <Text style={{ color: '#A0A0BE', fontSize: 13 }}>Няма доставени поръчки</Text>
             </View>
           ) : (
-            <View style={{ backgroundColor: colors.bgCard, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
-              <View style={{ flexDirection: 'row', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                {['Продукт', 'Бр.', 'Оборот', 'Дост.'].map((h, i) => (
-                  <Text key={i} style={{ flex: i === 0 ? 2 : 1, fontSize: 10, fontWeight: '700', color: colors.textMuted, textAlign: i === 0 ? 'left' : 'right' }}>{h}</Text>
-                ))}
-              </View>
-              {(summary as any).items.map((item: any, i: number) => (
-                <View key={i} style={{ flexDirection: 'row', padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                  <Text style={{ flex: 2, color: colors.textPrimary, fontSize: 13 }} numberOfLines={1}>{productTitle(item.product)}</Text>
-                  <Text style={{ flex: 1, color: colors.textSecondary, fontSize: 13, textAlign: 'right' }}>{item.totalQuantity}</Text>
-                  <Text style={{ flex: 1, color: colors.textPrimary, fontSize: 13, fontWeight: '600', textAlign: 'right' }}>{formatCurrency(item.totalRevenue, 0)}</Text>
-                  <Text style={{ flex: 1, color: colors.textSecondary, fontSize: 13, textAlign: 'right' }}>{item.totalDelivery > 0 ? formatCurrency(item.totalDelivery, 0) : '—'}</Text>
+            <View style={{ backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden' }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View>
+                  <TableHeader />
+                  {(summary as any).items.map((item: any, i: number) => (
+                    <TableRow key={i} item={item} last={i === (summary as any).items.length - 1} />
+                  ))}
+                  <SellerTotalRow grandTotal={(summary as any).grandTotal} grandDelivery={(summary as any).grandDelivery ?? 0} />
                 </View>
-              ))}
-              <View style={{ flexDirection: 'row', padding: 12, backgroundColor: colors.bgElevated }}>
-                <Text style={{ flex: 2, color: colors.textMuted, fontSize: 11, fontWeight: '700' }}>ОБЩО</Text>
-                <Text style={{ flex: 1 }} />
-                <Text style={{ flex: 1, color: colors.primary, fontSize: 13, fontWeight: '800', textAlign: 'right' }}>{formatCurrency((summary as any).grandTotal, 0)}</Text>
-                <Text style={{ flex: 1, color: colors.textSecondary, fontSize: 13, fontWeight: '700', textAlign: 'right' }}>{(summary as any).grandDelivery > 0 ? formatCurrency((summary as any).grandDelivery, 0) : '—'}</Text>
-              </View>
+              </ScrollView>
             </View>
           )}
         </>

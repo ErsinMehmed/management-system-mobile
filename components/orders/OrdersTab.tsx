@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
-  RefreshControl, Alert, Modal, Image, // ActivityIndicator used in list footer
+  RefreshControl, Alert, Modal, Image,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
@@ -108,9 +108,6 @@ function OrderCard({ order, onRejection }: { order: Order; onRejection: (id: str
         </View>
 
         <View style={{ alignItems: 'flex-end', gap: 6 }}>
-          <Text style={{ fontSize: 12, color: '#A0A0BE', fontWeight: '500' }}>
-            {dayjs(order.createdAt).format('DD MMM · HH:mm')}
-          </Text>
           {(isAdmin && !isSeller) && (
             <TouchableOpacity
               onPress={() => setStatusSheet(true)}
@@ -205,11 +202,6 @@ function OrderCard({ order, onRejection }: { order: Order; onRejection: (id: str
         paddingBottom: 14,
       }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View>
-            <Text style={{ fontSize: 11, color: '#A0A0BE', fontWeight: '500', marginBottom: 2 }}>Бройки</Text>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: '#1C1C2E' }}>{totalQty}</Text>
-          </View>
-
           {order.assignedTo?.name && (
             <View>
               <Text style={{ fontSize: 11, color: '#A0A0BE', fontWeight: '500', marginBottom: 2 }}>Доставчик</Text>
@@ -217,6 +209,10 @@ function OrderCard({ order, onRejection }: { order: Order; onRejection: (id: str
             </View>
           )}
         </View>
+
+        <Text style={{ fontSize: 12, color: '#A0A0BE', fontWeight: '500' }}>
+          {dayjs(order.createdAt).format('DD MMM · HH:mm')}
+        </Text>
       </View>
 
       {/* ── STATUS SHEET ── */}

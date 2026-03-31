@@ -3,7 +3,7 @@ import {
   Modal, View, Text, TextInput, TouchableOpacity,
   ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { colors, shadow } from '@/constants/theme';
 import { useClientOrderStore } from '@/store/clientOrderStore';
 import { useAuthStore } from '@/store/authStore';
@@ -11,7 +11,7 @@ import { productTitle } from '@/utils/format';
 import api from '@/services/api';
 import type { Product, UserListItem } from '@/types';
 
-interface Props { visible: boolean; onClose: () => void }
+interface Props { visible: boolean; onClose: () => void; onSuccess?: () => void }
 
 function Field({
   label, value, onChangeText, placeholder, keyboardType, multiline,
@@ -164,7 +164,7 @@ function UserPicker({ label, users, value, onSelect }: {
   );
 }
 
-export default function CreateOrderModal({ visible, onClose }: Props) {
+export default function CreateOrderModal({ visible, onClose, onSuccess }: Props) {
   const { orderData, setOrderData, clearOrderData, createOrder, isCreating } = useClientOrderStore();
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === 'Admin' || user?.role === 'Super Admin';
@@ -177,7 +177,7 @@ export default function CreateOrderModal({ visible, onClose }: Props) {
     if (!visible) return;
     api.get<Product[]>('/api/products').then((r) => setProducts(r.data || [])).catch(() => setProducts([]));
     if (isAdmin) {
-      api.get<UserListItem[]>('/api/users/list').then((r) => setUsers(r.data || [])).catch(() => setUsers([]));
+      api.get<{ users: UserListItem[] }>('/api/users/list').then((r) => setUsers(r.data.users || [])).catch(() => setUsers([]));
     }
   }, [visible, isAdmin]);
 
@@ -205,7 +205,7 @@ export default function CreateOrderModal({ visible, onClose }: Props) {
       return;
     }
     const ok = await createOrder();
-    if (ok) onClose();
+    if (ok) { onClose(); onSuccess?.(); }
     else Alert.alert('Грешка', 'Неуспешно създаване.');
   };
 
@@ -252,24 +252,57 @@ export default function CreateOrderModal({ visible, onClose }: Props) {
 
             <Field label="АДРЕС" value={orderData.address} onChangeText={(v) => setOrderData({ address: v })} placeholder="гр. София, ул. ..." />
 
-            {isAdmin && (
-              <UserPicker label="ДИСТРИБУТОР" users={users || []} value={orderData.assignedTo} onSelect={(id) => setOrderData({ assignedTo: id })} />
-            )}
-
             <Field label="БЕЛЕЖКА" value={orderData.note} onChangeText={(v) => setOrderData({ note: v })} placeholder="Обаждане преди доставка..." multiline />
+
+               {/* Contact method toggles */}
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4 }}>КОНТАКТ</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {([
+                  { value: 'viber', label: 'Viber', icon: 'viber', color: '#7360F2' },
+                  { value: 'whatsapp', label: 'WhatsApp', icon: 'whatsapp', color: '#25D366' },
+                ] as const).map((opt) => {
+                  const active = orderData.contactMethod === opt.value;
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      onPress={() => setOrderData({ contactMethod: active ? '' : opt.value })}
+                      style={{
+                        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        paddingVertical: 12, borderRadius: 14,
+                        backgroundColor: active ? opt.color + '18' : colors.bgInput,
+                        borderWidth: 1.5,
+                        borderColor: active ? opt.color : 'transparent',
+                      }}
+                    >
+                      <FontAwesome5 name={opt.icon} size={17} color={active ? opt.color : colors.textMuted} />
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: active ? opt.color : colors.textMuted }}>
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <Field label="ЦЕНА ДОСТАВКА (€)" value={orderData.deliveryCost} onChangeText={(v) => setOrderData({ deliveryCost: v })} placeholder="0.00" keyboardType="numeric" />
 
             {isSuperAdmin && (
               <Field label="ХОНОРАР ДИСТРИБУТОР" value={orderData.distributorPayout} onChangeText={(v) => setOrderData({ distributorPayout: v })} placeholder="0.00" keyboardType="numeric" />
             )}
 
-            <View style={{ height: 8 }} />
+            {isAdmin && (
+              <UserPicker label="ДИСТРИБУТОР" users={(users || []).filter((u) => u._id !== user?.id)} value={orderData.assignedTo} onSelect={(id) => setOrderData({ assignedTo: id })} />
+            )}
+
+            <View style={{ height: 1 }} />
 
             <TouchableOpacity
               onPress={handleSubmit}
               disabled={isCreating}
               style={{
                 backgroundColor: isCreating ? colors.bgElevated : colors.primary,
-                borderRadius: 16, paddingVertical: 17, alignItems: 'center',
+                borderRadius: 16, paddingVertical: 15, alignItems: 'center',
                 ...(!isCreating ? shadow.lg : {}),
               }}
             >

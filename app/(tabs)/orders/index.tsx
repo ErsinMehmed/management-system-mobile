@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 
 import AppHeader from '@/components/AppHeader';
 import BottomTabBar from '@/components/BottomTabBar';
+import Toast from '@/components/Toast';
 import OrdersTab from '@/components/orders/OrdersTab';
 import SummaryTab from '@/components/orders/SummaryTab';
 import HistoryTab from '@/components/orders/HistoryTab';
@@ -30,6 +31,7 @@ export default function OrdersScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('orders');
   const [createVisible, setCreateVisible] = useState(false);
   const [rejectionOrderId, setRejectionOrderId] = useState<string | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
 
   const user = useAuthStore((s) => s.user);
   const { loadOrders, loadSummary, loadHistory, loadStock, loadClients } = useClientOrderStore();
@@ -130,7 +132,8 @@ export default function OrdersScreen() {
       {/* Content */}
       <View style={{ flex: 1 }}>{renderContent()}</View>
 
-      <CreateOrderModal visible={createVisible} onClose={() => setCreateVisible(false)} />
+      <CreateOrderModal visible={createVisible} onClose={() => setCreateVisible(false)} onSuccess={() => setToastVisible(true)} />
+      <Toast visible={toastVisible} message="Поръчката е добавена успешно!" onHide={() => setToastVisible(false)} />
       <RejectionModal
         visible={rejectionOrderId !== null}
         orderId={rejectionOrderId ?? ''}
