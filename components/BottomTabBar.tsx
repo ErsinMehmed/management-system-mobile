@@ -5,34 +5,38 @@ import {
 } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, shadow, gradients } from '@/constants/theme';
+import { colors, shadow } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
 
 const TABS = [
   {
+    key: 'dashboard',
+    label: 'Табло',
+    icon: 'home-outline'        as const,
+    activeIcon: 'home'          as const,
+    route: '/(tabs)/dashboard',
+  },
+  {
     key: 'orders',
     label: 'Клиентски',
-    icon: 'receipt-outline'  as const,
-    activeIcon: 'receipt'    as const,
+    icon: 'receipt-outline'     as const,
+    activeIcon: 'receipt'       as const,
     route: '/(tabs)/orders',
+  },
+  {
+    key: 'regular-orders',
+    label: 'Поръчки',
+    icon: 'cart-outline'        as const,
+    activeIcon: 'cart'          as const,
+    route: '/(tabs)/regular-orders',
   },
   {
     key: 'products',
     label: 'Продукти',
-    icon: 'cube-outline'     as const,
-    activeIcon: 'cube'       as const,
+    icon: 'cube-outline'        as const,
+    activeIcon: 'cube'          as const,
     route: '/(tabs)/products',
-  },
-  // center placeholder — rendered separately
-  {
-    key: 'dashboard',
-    label: 'Табло',
-    icon: 'home-outline'     as const,
-    activeIcon: 'home'       as const,
-    route: '/(tabs)/dashboard',
-    center: true,
   },
   {
     key: 'sales',
@@ -44,8 +48,8 @@ const TABS = [
   {
     key: 'incomes',
     label: 'Приходи',
-    icon: 'cash-outline'     as const,
-    activeIcon: 'cash'       as const,
+    icon: 'wallet-outline'      as const,
+    activeIcon: 'wallet'        as const,
     route: '/(tabs)/incomes',
   },
 ] as const;
@@ -101,59 +105,11 @@ function TabItem({ tab, active }: { tab: typeof TABS[number]; active: boolean })
   );
 }
 
-function CenterButton({ active }: { active: boolean }) {
-  const scale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (active) {
-      Animated.sequence([
-        Animated.timing(scale, { toValue: 0.88, duration: 80, useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 1,    duration: 200, useNativeDriver: true, easing: Easing.out(Easing.back(2)) }),
-      ]).start();
-    }
-  }, [active]);
-
-  return (
-    <TouchableOpacity
-      onPress={() => router.push('/(tabs)/dashboard' as any)}
-      style={{ alignItems: 'center', justifyContent: 'flex-start', width: 72 }}
-      activeOpacity={0.8}
-    >
-      {/* Elevated circle — sits above the bar */}
-      <Animated.View style={{
-        marginTop: -28,
-        transform: [{ scale }],
-        ...shadow.lg,
-        borderRadius: 28,
-      }}>
-        <LinearGradient
-          colors={active ? gradients.primary : ['#E8EAFF', '#D4D7FF']}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={{
-            width: 56, height: 56, borderRadius: 28,
-            alignItems: 'center', justifyContent: 'center',
-            borderWidth: 3, borderColor: '#fff',
-          }}
-        >
-          <Ionicons name="home" size={26} color={active ? '#fff' : colors.primary} />
-        </LinearGradient>
-      </Animated.View>
-      <Text style={{
-        fontSize: 10, fontWeight: active ? '800' : '600',
-        color: active ? colors.primary : colors.textMuted,
-        marginTop: 6,
-      }}>
-        Табло
-      </Text>
-    </TouchableOpacity>
-  );
-}
-
 export default function BottomTabBar() {
-  const pathname  = usePathname();
-  const insets    = useSafeAreaInsets();
+  const pathname      = usePathname();
+  const insets        = useSafeAreaInsets();
   const paddingBottom = Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 0);
-  const isSeller  = useAuthStore((s) => s.user?.role === 'Seller');
+  const isSeller      = useAuthStore((s) => s.user?.role === 'Seller');
 
   const isActive = (route: string) => {
     const clean = route.replace('/(tabs)', '');
@@ -162,36 +118,18 @@ export default function BottomTabBar() {
 
   if (isSeller) return null;
 
-  const left  = TABS.filter((t) => !('center' in t && t.center)).slice(0, 2);
-  const right = TABS.filter((t) => !('center' in t && t.center)).slice(2);
-  const center = TABS.find((t) => 'center' in t && t.center)!;
-
   return (
     <View style={{
       backgroundColor: '#fff',
       paddingBottom,
-      borderTopWidth: 0,
       ...shadow.md,
       shadowOffset: { width: 0, height: -4 },
       shadowOpacity: 0.08,
       shadowRadius: 16,
     }}>
-      {/* Top border accent */}
       <View style={{ height: 1, backgroundColor: colors.divider }} />
-
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        paddingTop: 4,
-        paddingHorizontal: 8,
-      }}>
-        {left.map((tab) => (
-          <TabItem key={tab.key} tab={tab} active={isActive(tab.route)} />
-        ))}
-
-        <CenterButton active={isActive(center.route)} />
-
-        {right.map((tab) => (
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 4, paddingHorizontal: 4 }}>
+        {TABS.map((tab) => (
           <TabItem key={tab.key} tab={tab} active={isActive(tab.route)} />
         ))}
       </View>
