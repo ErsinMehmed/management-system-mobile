@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
   RefreshControl, Alert, Modal, Image,
@@ -20,6 +20,43 @@ const STATUS_CFG: Record<OrderStatus, { color: string; bg: string; label: string
   доставена: { color: '#16A34A', bg: '#DCFCE7', label: 'Доставена' },
   отказана:  { color: '#EF4444', bg: '#FEE2E2', label: 'Отказана' },
 };
+
+// Business day starts at 09:00. Anything before counts as the previous day.
+function getBusinessDayKey(date: string | Date): number {
+  const d = new Date(date);
+  if (d.getHours() < 9) d.setDate(d.getDate() - 1);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function getDayLabel(dayKey: number): string {
+  const today = getBusinessDayKey(new Date());
+  const yesterday = today - 86400000;
+  if (dayKey === today) return 'Днес';
+  if (dayKey === yesterday) return 'Вчера';
+  return new Date(dayKey).toLocaleDateString('bg-BG', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function pluralOrders(n: number): string {
+  return n === 1 ? 'поръчка' : 'поръчки';
+}
+
+function DaySeparator({ label, count }: { label: string; count: number }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 }}>
+      <View style={{ flex: 1, height: 1, backgroundColor: '#E2E2F0' }} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Text style={{ fontSize: 11, fontWeight: '800', color: '#52527A', letterSpacing: 0.6, textTransform: 'uppercase' }}>{label}</Text>
+        <View style={{ backgroundColor: '#EEF2FF', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+          <Text style={{ fontSize: 10, fontWeight: '800', color: '#6366F1' }}>
+            {count} {pluralOrders(count)}
+          </Text>
+        </View>
+      </View>
+      <View style={{ flex: 1, height: 1, backgroundColor: '#E2E2F0' }} />
+    </View>
+  );
+}
 
 function OrderCard({ order, onRejection }: { order: Order; onRejection: (id: string) => void }) {
   const user = useAuthStore((s) => s.user);
@@ -297,11 +334,38 @@ export default function OrdersTab({ onCreatePress, onRejection }: Props) {
     setRefreshing(false);
   }, [loadOrders]);
 
+  // Pre-compute business-day groupings and which order should render a separator
+  const items = useMemo(() => {
+    const list = orders.items ?? [];
+    const counts = new Map<number, number>();
+    for (const o of list) {
+      const k = getBusinessDayKey(o.createdAt);
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+    let prev: number | null = null;
+    return list.map((order) => {
+      const dayKey = getBusinessDayKey(order.createdAt);
+      const showSeparator = dayKey !== prev;
+      prev = dayKey;
+      return {
+        order,
+        separator: showSeparator
+          ? { label: getDayLabel(dayKey), count: counts.get(dayKey) ?? 0 }
+          : null,
+      };
+    });
+  }, [orders.items]);
+
   return (
     <FlashList
-      data={orders.items}
-      keyExtractor={(item) => item._id}
-      renderItem={({ item }) => <OrderCard order={item} onRejection={onRejection} />}
+      data={items}
+      keyExtractor={(item) => item.order._id}
+      renderItem={({ item }) => (
+        <>
+          {item.separator && <DaySeparator label={item.separator.label} count={item.separator.count} />}
+          <OrderCard order={item.order} onRejection={onRejection} />
+        </>
+      )}
       contentContainerStyle={{ paddingBottom: 32, paddingTop: 12 }}
       estimatedItemSize={290}
       ListHeaderComponent={
