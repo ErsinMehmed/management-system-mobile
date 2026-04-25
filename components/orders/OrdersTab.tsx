@@ -369,22 +369,11 @@ export default function OrdersTab({ onCreatePress, onRejection }: Props) {
       contentContainerStyle={{ paddingBottom: 32, paddingTop: 12 }}
       estimatedItemSize={290}
       ListHeaderComponent={
-        <View style={{
-          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-          paddingHorizontal: 16, marginBottom: 14,
-        }}>
+        !!user ? (
           <View style={{
-            flexDirection: 'row', alignItems: 'center', gap: 6,
-            backgroundColor: '#DCFCE7', paddingHorizontal: 12, paddingVertical: 8,
-            borderRadius: 20,
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end',
+            paddingHorizontal: 16, marginBottom: 14,
           }}>
-            <Ionicons name="checkmark-circle" size={14} color="#16A34A" />
-            <Text style={{ fontSize: 13, fontWeight: '700', color: '#16A34A' }}>
-              Днес: {isLoading ? '—' : orders.dailyCount ?? 0}
-            </Text>
-          </View>
-
-          {!!user && (
             <TouchableOpacity
               onPress={onCreatePress}
               style={{
@@ -397,8 +386,8 @@ export default function OrdersTab({ onCreatePress, onRejection }: Props) {
               <Ionicons name="add" size={18} color="#fff" />
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Добави</Text>
             </TouchableOpacity>
-          )}
-        </View>
+          </View>
+        ) : null
       }
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366F1" colors={['#6366F1']} />

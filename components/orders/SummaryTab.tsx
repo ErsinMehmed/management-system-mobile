@@ -1,14 +1,54 @@
 import { useState } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView,
-  ActivityIndicator, TextInput, Alert,
+  ActivityIndicator, Alert, Platform, Modal,
 } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { useClientOrderStore } from '@/store/clientOrderStore';
 import { useAuthStore } from '@/store/authStore';
 import { formatCurrency, productTitle } from '@/utils/format';
 import api from '@/services/api';
+
+function formatDateBg(d: Date | null): string {
+  if (!d) return '';
+  return d.toLocaleDateString('bg-BG', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function DateField({
+  label, value, onPress, onClear,
+}: { label: string; value: Date | null; onPress: () => void; onClear: () => void }) {
+  const filled = !!value;
+  return (
+    <View style={{ flex: 1, gap: 6 }}>
+      <Text style={{ fontSize: 11, fontWeight: '700', color: '#A0A0BE', letterSpacing: 0.4 }}>{label}</Text>
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.85}
+        style={{
+          backgroundColor: filled ? '#EEF2FF' : '#F7F8FC',
+          borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11,
+          flexDirection: 'row', alignItems: 'center', gap: 8,
+          borderWidth: 1.5, borderColor: filled ? '#6366F1' : '#EBEBF5',
+        }}
+      >
+        <Ionicons name="calendar-outline" size={16} color={filled ? '#6366F1' : '#A0A0BE'} />
+        <Text style={{
+          flex: 1, fontSize: 13, fontWeight: filled ? '700' : '500',
+          color: filled ? '#1C1C2E' : '#A0A0BE',
+        }}>
+          {filled ? formatDateBg(value) : 'Избери дата'}
+        </Text>
+        {filled && (
+          <TouchableOpacity onPress={onClear} hitSlop={8}>
+            <Ionicons name="close-circle" size={16} color="#A0A0BE" />
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 type Preset = '24h' | 'today' | 'yesterday' | 'week' | 'month' | 'all' | 'custom';
 
@@ -131,10 +171,19 @@ export default function SummaryTab() {
   const isSuperAdmin = user?.role === 'Super Admin';
 
   const [preset, setPreset]         = useState<Preset>('today');
-  const [customFrom, setCustomFrom] = useState('');
-  const [customTo, setCustomTo]     = useState('');
+  const [customFrom, setCustomFrom] = useState<Date | null>(null);
+  const [customTo, setCustomTo]     = useState<Date | null>(null);
+  const [pickerOpen, setPickerOpen] = useState<null | 'from' | 'to'>(null);
   const [aiInsight, setAiInsight]   = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const onPickerChange = (event: DateTimePickerEvent, selected?: Date) => {
+    if (Platform.OS === 'android') setPickerOpen(null);
+    if (event.type === 'dismissed') return;
+    if (!selected) return;
+    if (pickerOpen === 'from') setCustomFrom(selected);
+    else if (pickerOpen === 'to') setCustomTo(selected);
+  };
 
   const applyFilter = (p: Preset, from?: string, to?: string) => {
     if (p === 'custom') {
@@ -167,9 +216,10 @@ export default function SummaryTab() {
   };
 
   const handlePayout = (seller: any) => {
+    const amount = seller.sellerUnpaidPayout ?? seller.sellerPayout ?? 0;
     Alert.alert(
       'Изплати хонорар',
-      `Сигурен ли си, че искаш да изплатиш на ${seller.sellerName}?`,
+      `${seller.sellerName}\n\nСума за изплащане: ${formatCurrency(amount)}\nНеизплатени поръчки: ${seller.sellerUnpaidCount ?? 0}`,
       [
         { text: 'Отмени', style: 'cancel' },
         { text: 'Изплати', onPress: () => markSellerAsPaid(seller._id) },
@@ -209,33 +259,76 @@ export default function SummaryTab() {
         {preset === 'custom' && (
           <View style={{ gap: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F0F0F8' }}>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <View style={{ flex: 1, gap: 6 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#A0A0BE', letterSpacing: 0.4 }}>ОТ</Text>
-                <TextInput
-                  style={{ backgroundColor: '#F7F8FC', borderRadius: 12, padding: 11, color: '#1C1C2E', fontSize: 13, borderWidth: 1.5, borderColor: '#EBEBF5' }}
-                  placeholder="2026-01-01"
-                  placeholderTextColor="#C0C0D8"
-                  value={customFrom}
-                  onChangeText={setCustomFrom}
-                />
-              </View>
-              <View style={{ flex: 1, gap: 6 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#A0A0BE', letterSpacing: 0.4 }}>ДО</Text>
-                <TextInput
-                  style={{ backgroundColor: '#F7F8FC', borderRadius: 12, padding: 11, color: '#1C1C2E', fontSize: 13, borderWidth: 1.5, borderColor: '#EBEBF5' }}
-                  placeholder="2026-12-31"
-                  placeholderTextColor="#C0C0D8"
-                  value={customTo}
-                  onChangeText={setCustomTo}
-                />
-              </View>
+              <DateField
+                label="ОТ"
+                value={customFrom}
+                onPress={() => setPickerOpen('from')}
+                onClear={() => setCustomFrom(null)}
+              />
+              <DateField
+                label="ДО"
+                value={customTo}
+                onPress={() => setPickerOpen('to')}
+                onClear={() => setCustomTo(null)}
+              />
             </View>
             <TouchableOpacity
-              onPress={() => applyFilter('custom', customFrom || undefined, customTo || undefined)}
-              style={{ backgroundColor: '#6366F1', borderRadius: 12, paddingVertical: 12, alignItems: 'center' }}
+              onPress={() => applyFilter(
+                'custom',
+                customFrom ? dayjs(customFrom).startOf('day').toISOString() : undefined,
+                customTo ? dayjs(customTo).endOf('day').toISOString() : undefined,
+              )}
+              disabled={!customFrom && !customTo}
+              style={{
+                backgroundColor: (!customFrom && !customTo) ? '#C7CDE8' : '#6366F1',
+                borderRadius: 12, paddingVertical: 12, alignItems: 'center',
+              }}
             >
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Приложи</Text>
             </TouchableOpacity>
+
+            {/* Native picker — iOS shows a sheet, Android opens a system dialog */}
+            {pickerOpen && Platform.OS === 'ios' && (
+              <Modal transparent animationType="fade" onRequestClose={() => setPickerOpen(null)}>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }}
+                  activeOpacity={1}
+                  onPress={() => setPickerOpen(null)}
+                />
+                <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 24 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#A0A0BE', letterSpacing: 0.4 }}>
+                      {pickerOpen === 'from' ? 'ОТ' : 'ДО'}
+                    </Text>
+                    <TouchableOpacity onPress={() => setPickerOpen(null)}>
+                      <Text style={{ color: '#6366F1', fontWeight: '700', fontSize: 14 }}>Готово</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={{ alignItems: 'center' }}>
+                    <DateTimePicker
+                      value={(pickerOpen === 'from' ? customFrom : customTo) ?? new Date()}
+                      mode="date"
+                      display="inline"
+                      locale="bg-BG"
+                      onChange={onPickerChange}
+                      accentColor="#6366F1"
+                      themeVariant="light"
+                      maximumDate={pickerOpen === 'from' && customTo ? customTo : undefined}
+                      minimumDate={pickerOpen === 'to' && customFrom ? customFrom : undefined}
+                    />
+                  </View>
+                </View>
+              </Modal>
+            )}
+            {pickerOpen && Platform.OS === 'android' && (
+              <DateTimePicker
+                value={(pickerOpen === 'from' ? customFrom : customTo) ?? new Date()}
+                mode="date"
+                onChange={onPickerChange}
+                maximumDate={pickerOpen === 'from' && customTo ? customTo : undefined}
+                minimumDate={pickerOpen === 'to' && customFrom ? customFrom : undefined}
+              />
+            )}
           </View>
         )}
       </View>
