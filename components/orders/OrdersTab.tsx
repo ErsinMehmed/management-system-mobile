@@ -53,7 +53,6 @@ function OrderCard({ order, onRejection }: { order: Order; onRejection: (id: str
   const [deleting, setDeleting] = useState(false);
 
   const s = STATUS_CFG[order.status] ?? STATUS_CFG['нова'];
-  const totalQty = order.quantity + (order.secondProduct?.product ? order.secondProduct.quantity : 0);
   const STATUSES: OrderStatus[] = ['нова', 'доставена', 'отказана'];
 
   const handleDelete = () => {
@@ -70,149 +69,159 @@ function OrderCard({ order, onRejection }: { order: Order; onRejection: (id: str
     ]);
   };
 
+  const totalAmount = order.price + (order.secondProduct?.product ? order.secondProduct.price : 0);
+  const hasSecond = !!order.secondProduct?.product;
+
   const cardContent = (
     <TouchableOpacity
-      activeOpacity={0.95}
+      activeOpacity={0.96}
       onPress={() => router.push(`/(tabs)/orders/${order._id}`)}
       style={{
         backgroundColor: '#fff',
-        borderRadius: 20,
-        borderTopWidth: 3,
-        borderTopColor: s.color,
-        ...shadow.sm,
+        borderRadius: 22,
+        borderWidth: 1.5,
+        borderColor: '#1C1C2E',
+        shadowColor: '#1C1C2E',
+        shadowOffset: { width: 3, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 0,
+        elevation: 2,
+        overflow: 'hidden',
       }}
     >
-      {/* ── TOP: Order ID label + date ── */}
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 18,
-        paddingTop: 14,
-        paddingBottom: 10,
-      }}>
-        <View style={{ gap: 4 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={{ fontSize: 11, fontWeight: '500', color: '#A0A0BE', letterSpacing: 0.3 }}>
-              Поръчка
-            </Text>
-            {order.isNewClient && (
-              <View style={{ backgroundColor: '#FEF9C3', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-                <Text style={{ fontSize: 10, fontWeight: '800', color: '#A16207', letterSpacing: 0.3 }}>НОВ КЛИЕНТ</Text>
-              </View>
-            )}
-          </View>
-          <Text style={{ fontSize: 20, fontWeight: '800', color: '#1C1C2E', letterSpacing: -0.5 }}>
-            {order.orderNumber > 0 ? `#${order.orderNumber}` : order.phone}
-          </Text>
-        </View>
-
-        <View style={{ alignItems: 'flex-end', gap: 6 }}>
-          {(isAdmin && !isSeller) && (
-            <TouchableOpacity
-              onPress={() => setStatusSheet(true)}
-              activeOpacity={0.75}
-              style={{
-                flexDirection: 'row', alignItems: 'center', gap: 5,
-                backgroundColor: s.bg, borderRadius: 8,
-                paddingHorizontal: 10, paddingVertical: 5,
-              }}
-            >
-              <Text style={{ fontSize: 12, fontWeight: '700', color: s.color }}>{s.label}</Text>
-              <Ionicons name="chevron-down" size={10} color={s.color} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* ── ROUTE ROW: phone → address ── */}
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 18,
-        paddingBottom: 14,
-        gap: 8,
-      }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <Ionicons name="call-outline" size={13} color="#A0A0BE" />
-          <Text style={{ fontSize: 13, fontWeight: '600', color: '#52527A' }}>{order.phone}</Text>
-        </View>
-
-        {/* dashed connector */}
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4 }}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <View key={i} style={{ flex: 1, height: 1.5, backgroundColor: '#E2E2F0', borderRadius: 1 }} />
-          ))}
-          <Ionicons name="arrow-forward" size={11} color="#C0C0D8" />
-        </View>
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <Ionicons name="location-outline" size={13} color="#A0A0BE" />
-          <Text style={{ fontSize: 13, fontWeight: '600', color: '#52527A' }} numberOfLines={1}>
-            {order.address ? order.address : 'Без адрес'}
-          </Text>
-        </View>
-      </View>
-
-      {/* ── PRODUCT SECTION ── */}
-      <View style={{ marginHorizontal: 18, marginBottom: 14, gap: 8 }}>
-        {/* Primary product row */}
-        <View style={{
-          backgroundColor: '#F7F8FC', borderRadius: 12,
-          padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10,
-        }}>
-          <ProductThumb imageUrl={order.product?.image_url} size={40} />
-          <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#1C1C2E' }} numberOfLines={1}>
-            {productTitle(order.product)}
-          </Text>
-          <Text style={{ fontSize: 12, color: '#52527A', fontWeight: '600', marginRight: 6 }}>
-            {order.quantity} бр.
-          </Text>
-          <Text style={{ fontSize: 14, fontWeight: '800', color: '#6366F1' }}>
-            {formatCurrency(order.price)}
-          </Text>
-        </View>
-
-        {/* Second product row */}
-        {order.secondProduct?.product && (
+      {/* ── HERO: image + headline ── */}
+      <View style={{ flexDirection: 'row', padding: 14, gap: 14 }}>
+        {/* Big product image with second-product peek */}
+        <View>
           <View style={{
-            backgroundColor: '#F7F8FC', borderRadius: 12,
-            padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10,
+            width: 96, height: 96, borderRadius: 16, overflow: 'hidden',
+            borderWidth: 1.5, borderColor: '#1C1C2E',
+            backgroundColor: '#ECEDF8',
           }}>
-            <ProductThumb imageUrl={order.secondProduct.product?.image_url} size={40} />
-            <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#1C1C2E' }} numberOfLines={1}>
-              {productTitle(order.secondProduct.product)}
-            </Text>
-            <Text style={{ fontSize: 12, color: '#52527A', fontWeight: '600', marginRight: 6 }}>
-              {order.secondProduct.quantity} бр.
-            </Text>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#6366F1' }}>
-              {formatCurrency(order.secondProduct.price)}
-            </Text>
+            <ProductThumb imageUrl={order.product?.image_url} size={96} />
           </View>
-        )}
-      </View>
 
-      {/* ── FOOTER ── */}
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 18,
-        paddingBottom: 14,
-      }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          {order.assignedTo?.name && (
-            <View>
-              <Text style={{ fontSize: 11, color: '#A0A0BE', fontWeight: '500', marginBottom: 2 }}>Доставчик</Text>
-               <Text style={{ fontSize: 14, fontWeight: '700', color: '#1C1C2E' }}>{order.assignedTo.name}</Text>
+          {hasSecond && (
+            <View style={{
+              position: 'absolute', right: -8, bottom: -8,
+              width: 38, height: 38, borderRadius: 12, overflow: 'hidden',
+              borderWidth: 1.5, borderColor: '#1C1C2E',
+              backgroundColor: '#fff',
+            }}>
+              <ProductThumb imageUrl={order.secondProduct!.product?.image_url} size={38} />
             </View>
           )}
         </View>
 
-        <Text style={{ fontSize: 12, color: '#A0A0BE', fontWeight: '500' }}>
-          {dayjs(order.createdAt).format('DD MMM · HH:mm')}
-        </Text>
+        {/* Right column */}
+        <View style={{ flex: 1, justifyContent: 'space-between' }}>
+          {/* Order id + status */}
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: '#A0A0BE', letterSpacing: 1.2 }}>
+                ПОРЪЧКА
+              </Text>
+              <Text style={{ fontSize: 24, fontWeight: '900', color: '#1C1C2E', letterSpacing: -0.8, marginTop: 1 }}>
+                {order.orderNumber > 0 ? `#${order.orderNumber}` : order.phone}
+              </Text>
+            </View>
+
+            {(isAdmin && !isSeller) ? (
+              <TouchableOpacity
+                onPress={() => setStatusSheet(true)}
+                activeOpacity={0.8}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 4,
+                  backgroundColor: s.color, borderRadius: 999,
+                  paddingHorizontal: 10, paddingVertical: 5,
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#fff', letterSpacing: 0.3, textTransform: 'uppercase' }}>{s.label}</Text>
+                <Ionicons name="chevron-down" size={10} color="#fff" />
+              </TouchableOpacity>
+            ) : (
+              <View style={{
+                backgroundColor: s.color, borderRadius: 999,
+                paddingHorizontal: 10, paddingVertical: 5,
+              }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#fff', letterSpacing: 0.3, textTransform: 'uppercase' }}>{s.label}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Product name */}
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#1C1C2E', marginTop: 4 }} numberOfLines={1}>
+            {productTitle(order.product)}
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#52527A' }}>
+              {order.quantity} бр.
+            </Text>
+            {hasSecond && (
+              <>
+                <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#A0A0BE' }} />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#52527A' }} numberOfLines={1}>
+                  + {productTitle(order.secondProduct!.product)} ({order.secondProduct!.quantity} бр.)
+                </Text>
+              </>
+            )}
+          </View>
+
+          {order.isNewClient && (
+            <View style={{ alignSelf: 'flex-start', marginTop: 6, backgroundColor: '#FEF9C3', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Text style={{ fontSize: 10, fontWeight: '900', color: '#A16207', letterSpacing: 0.4 }}>НОВ КЛИЕНТ</Text>
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* ── DIVIDER ── */}
+      <View style={{ height: 1.5, backgroundColor: '#1C1C2E', marginHorizontal: 14 }} />
+
+      {/* ── CONTACT STRIP ── */}
+      <View style={{ paddingHorizontal: 14, paddingTop: 12, gap: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="call" size={12} color="#6366F1" />
+          </View>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: '#1C1C2E' }}>{order.phone}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="location" size={12} color="#D97706" />
+          </View>
+          <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: '#52527A' }} numberOfLines={1}>
+            {order.address || 'Без адрес'}
+          </Text>
+        </View>
+      </View>
+
+      {/* ── FOOTER ── */}
+      <View style={{
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14, gap: 12,
+      }}>
+        <View style={{ flex: 1 }}>
+          {order.assignedTo?.name && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="person-circle" size={14} color="#52527A" />
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#1C1C2E' }} numberOfLines={1}>{order.assignedTo.name}</Text>
+            </View>
+          )}
+          <Text style={{ fontSize: 11, color: '#A0A0BE', fontWeight: '600', marginTop: 2 }}>
+            {dayjs(order.createdAt).format('DD MMM · HH:mm')}
+          </Text>
+        </View>
+
+        <View style={{
+          backgroundColor: '#1C1C2E', borderRadius: 12,
+          paddingHorizontal: 14, paddingVertical: 8,
+        }}>
+          <Text style={{ fontSize: 9, fontWeight: '700', color: '#A0A0BE', letterSpacing: 1 }}>ОБЩО</Text>
+          <Text style={{ fontSize: 18, fontWeight: '900', color: '#fff', letterSpacing: -0.3, marginTop: -2 }}>
+            {formatCurrency(totalAmount)}
+          </Text>
+        </View>
       </View>
 
       {/* ── STATUS SHEET ── */}
