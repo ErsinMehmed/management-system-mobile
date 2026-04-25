@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
-  RefreshControl, TextInput,
+  RefreshControl, TextInput, Image,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
@@ -69,7 +69,7 @@ function SellerCard({ seller, isSuperAdmin, dirty, onChange }: {
   seller: SellerStockEntry; isSuperAdmin: boolean;
   dirty: Record<string, number>; onChange: (productId: string, value: number) => void;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const dirtyCount = Object.keys(dirty).length;
   const total = seller.products.reduce((s, sp) => s + (dirty[sp.productId] !== undefined ? dirty[sp.productId] : sp.stock), 0);
 
@@ -99,13 +99,20 @@ function SellerCard({ seller, isSuperAdmin, dirty, onChange }: {
               <View
                 key={sp.productId}
                 style={{
-                  flexDirection: 'row', alignItems: 'center',
-                  paddingHorizontal: 16, paddingVertical: 12,
+                  flexDirection: 'row', alignItems: 'center', gap: 10,
+                  paddingHorizontal: 14, paddingVertical: 10,
                   borderBottomWidth: 1, borderBottomColor: colors.divider,
                   backgroundColor: dirty[sp.productId] !== undefined ? colors.primaryLight : 'transparent',
                 }}
               >
-                <View style={{ flex: 1, marginRight: 10 }}>
+                {sp.productImage ? (
+                  <Image source={{ uri: sp.productImage }} style={{ width: 40, height: 40, borderRadius: 10 }} resizeMode="cover" />
+                ) : (
+                  <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: colors.bgInput, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="cube-outline" size={18} color={colors.textMuted} />
+                  </View>
+                )}
+                <View style={{ flex: 1, marginRight: 8 }}>
                   <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '600' }} numberOfLines={2}>
                     {[
                       sp.productName,

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, ActivityIndicator,
-  TextInput, RefreshControl, Keyboard,
+  TextInput, RefreshControl,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,24 +9,16 @@ import dayjs from 'dayjs';
 import { colors, shadow } from '@/constants/theme';
 import { useClientOrderStore } from '@/store/clientOrderStore';
 import type { ClientPhone } from '@/types';
+import AddClientModal from './AddClientModal';
+import ClientProfileModal from './ClientProfileModal';
 
-function ClientRow({ client, onSaveName }: { client: ClientPhone; onSaveName: (phone: string, name: string) => Promise<void> }) {
-  const [editing, setEditing] = useState(false);
-  const [nameText, setNameText] = useState(client.name ?? '');
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => { setNameText(client.name ?? ''); }, [client.name]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    await onSaveName(client.phone, nameText.trim());
-    setSaving(false);
-    setEditing(false);
-    Keyboard.dismiss();
-  };
-
+function ClientRow({ client, onPress }: { client: ClientPhone; onPress: () => void }) {
   return (
-    <View style={{ backgroundColor: '#fff', borderRadius: 18, marginBottom: 10, padding: 16, ...shadow.sm }}>
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      style={{ backgroundColor: '#fff', borderRadius: 18, marginBottom: 10, padding: 16, ...shadow.sm }}
+    >
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         {/* Avatar */}
         <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
@@ -37,10 +29,12 @@ function ClientRow({ client, onSaveName }: { client: ClientPhone; onSaveName: (p
 
         <View style={{ flex: 1 }}>
           <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 15 }}>{client.phone}</Text>
-          {client.name ? <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 2 }}>{client.name}</Text> : null}
+          {client.name
+            ? <Text style={{ color: colors.textMuted, fontSize: 13, marginTop: 2 }}>{client.name}</Text>
+            : <Text style={{ color: '#C0C0D8', fontSize: 13, marginTop: 2, fontStyle: 'italic' }}>Няма име</Text>}
         </View>
 
-        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+        <View style={{ alignItems: 'flex-end', gap: 4, marginRight: 8 }}>
           <View style={{ backgroundColor: colors.primaryLight, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
             <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>{client.orderCount}×</Text>
           </View>
@@ -49,52 +43,18 @@ function ClientRow({ client, onSaveName }: { client: ClientPhone; onSaveName: (p
           )}
         </View>
 
-        <TouchableOpacity onPress={() => setEditing((v) => !v)} style={{ marginLeft: 10, padding: 6 }}>
-          <Ionicons name={editing ? 'close-circle' : 'pencil'} size={18} color={editing ? colors.rejected : colors.textMuted} />
-        </TouchableOpacity>
+        <Ionicons name="chevron-forward" size={16} color="#C0C0D8" />
       </View>
-
-      {editing && (
-        <View style={{ marginTop: 12, gap: 10 }}>
-          <TextInput
-            style={{
-              backgroundColor: colors.bgInput, borderRadius: 12,
-              paddingHorizontal: 14, paddingVertical: 11,
-              fontSize: 15, color: colors.textPrimary,
-              borderWidth: 1.5, borderColor: colors.primary,
-            }}
-            value={nameText}
-            onChangeText={setNameText}
-            placeholder="Въведи клиентско име..."
-            placeholderTextColor={colors.textMuted}
-            autoFocus
-            onSubmitEditing={handleSave}
-            returnKeyType="done"
-          />
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity
-              onPress={() => { setNameText(client.name ?? ''); setEditing(false); Keyboard.dismiss(); }}
-              style={{ flex: 1, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.bgInput, alignItems: 'center' }}
-            >
-              <Text style={{ color: colors.textSecondary, fontWeight: '700' }}>Отмени</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleSave} disabled={saving}
-              style={{ flex: 2, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' }}
-            >
-              {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '700' }}>Запази</Text>}
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
 export default function ClientsTab() {
-  const { clients, clientsTotal, clientsHasMore, isClientsLoading, isClientsLoadingMore, loadClients, saveClientName } = useClientOrderStore();
+  const { clients, clientsTotal, clientsHasMore, isClientsLoading, isClientsLoadingMore, loadClients } = useClientOrderStore();
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [profilePhone, setProfilePhone] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pageRef = useRef(1);
 
@@ -124,10 +84,10 @@ export default function ClientsTab() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Search */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
+      {/* Search + Add */}
+      <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
         <View style={{
-          flexDirection: 'row', alignItems: 'center', gap: 8,
+          flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
           backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 11,
           ...shadow.sm,
         }}>
@@ -146,12 +106,24 @@ export default function ClientsTab() {
             </TouchableOpacity>
           )}
         </View>
+        <TouchableOpacity
+          onPress={() => setShowAdd(true)}
+          style={{
+            width: 46, height: 46, borderRadius: 16,
+            backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
+            ...shadow.lg,
+          }}
+        >
+          <Ionicons name="person-add" size={18} color="#fff" />
+        </TouchableOpacity>
       </View>
 
       <FlashList
         data={clients}
         keyExtractor={(item) => item.phone}
-        renderItem={({ item }: { item: ClientPhone }) => <ClientRow client={item} onSaveName={saveClientName} />}
+        renderItem={({ item }: { item: ClientPhone }) => (
+          <ClientRow client={item} onPress={() => setProfilePhone(item.phone)} />
+        )}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24, paddingTop: 4 }}
         ListHeaderComponent={
           clients.length > 0 ? (
@@ -176,6 +148,19 @@ export default function ClientsTab() {
           )
         }
         ListFooterComponent={isClientsLoadingMore ? <View style={{ padding: 16, alignItems: 'center' }}><ActivityIndicator color={colors.primary} size="small" /></View> : null}
+      />
+
+      <AddClientModal
+        visible={showAdd}
+        onClose={() => setShowAdd(false)}
+        onAdded={() => loadClients(1, search, true)}
+      />
+
+      <ClientProfileModal
+        visible={!!profilePhone}
+        phone={profilePhone}
+        onClose={() => setProfilePhone(null)}
+        onNameChange={() => loadClients(1, search, true)}
       />
     </View>
   );

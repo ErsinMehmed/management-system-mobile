@@ -105,6 +105,7 @@ export interface StockProduct {
   productFlavor?: string;
   productPuffs?: number;
   productCount?: number;
+  productImage?: string | null;
   stock: number;
 }
 
@@ -122,6 +123,49 @@ export interface ClientPhone {
   name: string;
   lastOrder: string;
   orderCount: number;
+}
+
+export interface ClientNote {
+  _id: string;
+  text: string;
+  createdAt: string;
+  createdBy?: { _id: string; name: string } | null;
+}
+
+export interface ClientHistoryOrder {
+  _id: string;
+  orderNumber: number;
+  status: OrderStatus;
+  quantity: number;
+  price: number;
+  createdAt: string;
+  product?: { name?: string; weight?: number; flavor?: string; puffs?: number; count?: number } | null;
+  assignedTo?: { _id: string; name: string } | null;
+}
+
+export interface ClientFavoriteProduct {
+  name: string;
+  weight?: number;
+  quantity: number;
+  orders: number;
+}
+
+export interface ClientProfileSummary {
+  totalOrders: number;
+  totalRevenue: number;
+  firstOrder: string | null;
+  lastOrder: string | null;
+  delivered: number;
+  rejected: number;
+}
+
+export interface ClientProfile {
+  phone: string;
+  name: string;
+  notes: ClientNote[];
+  orders: ClientHistoryOrder[];
+  summary: ClientProfileSummary;
+  favoriteProduct: ClientFavoriteProduct | null;
 }
 
 // ─── Summary ──────────────────────────────────────────────────────────────────
