@@ -118,17 +118,18 @@ export default function OrdersScreen() {
                   }
                 }}
                 onPress={() => handleTabPress(tab.key, index)}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 4, paddingVertical: 10, marginRight: 4 }}
+                hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 8, paddingVertical: 14, marginRight: 6 }}
               >
                 <Ionicons
                   name={(isActive ? tab.activeIcon : tab.icon) as any}
-                  size={14}
+                  size={17}
                   color={isActive ? colors.primary : colors.textMuted}
                 />
                 <Text style={{
-                  fontSize: 13, fontWeight: isActive ? '700' : '500',
+                  fontSize: 15, fontWeight: isActive ? '700' : '600',
                   color: isActive ? colors.primary : colors.textMuted,
-                  paddingHorizontal: 4,
+                  paddingHorizontal: 2,
                 }}>
                   {tab.label}
                 </Text>

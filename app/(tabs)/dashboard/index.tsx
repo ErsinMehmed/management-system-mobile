@@ -19,6 +19,8 @@ interface Product {
   name: string;
   weight?: number;
   puffs?: number;
+  flavor?: string;
+  count?: number;
   availability: number;
   units_per_box: number;
   price: number;
@@ -36,105 +38,91 @@ interface StockRow {
   value: number;
 }
 
-/* ─── Stat cards ─── */
-const STAT_CARDS: {
-  key: CardKey;
-  label: string;
-  value: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  iconColor: string;
-  iconBg: string;
-  borderColor: string;
-}[] = [
-  { key: 'incomes',  label: 'Приходи',  value: '—', icon: 'trending-up-outline',   iconColor: '#16A34A', iconBg: '#F0FDF4', borderColor: '#16A34A' },
-  { key: 'expenses', label: 'Разходи',  value: '—', icon: 'trending-down-outline', iconColor: '#DC2626', iconBg: '#FEF2F2', borderColor: '#DC2626' },
-  { key: 'profit',   label: 'Печалба',  value: '—', icon: 'bar-chart-outline',     iconColor: '#6366F1', iconBg: '#EEF2FF', borderColor: '#6366F1' },
+type Period = 'today' | 'yesterday' | 'last7days' | 'lastMonth' | 'all';
+
+const PERIODS: { key: Period; label: string }[] = [
+  { key: 'today',     label: 'Днес' },
+  { key: 'yesterday', label: 'Вчера' },
+  { key: 'last7days', label: '7 дни' },
+  { key: 'lastMonth', label: '30 дни' },
+  { key: 'all',       label: 'Всичко' },
 ];
 
-/* ─── Dummy detail data ─── */
-type TabKey = 'today' | 'week' | 'month';
+interface CategoryProductRow {
+  _id: string;
+  name: string;
+  weight?: number;
+  puffs?: number;
+  flavor?: string;
+  count?: number;
+  category: string;
+  quantity: number;
+  total: number;
+}
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'today', label: 'Днес' },
-  { key: 'week',  label: 'Седмица' },
-  { key: 'month', label: 'Месец' },
-];
+interface IncomesResponse {
+  incomes: number;
+  incomes_by_products: Array<Omit<CategoryProductRow, 'total'> & { total_incomes: number }>;
+}
 
-const DUMMY: Record<CardKey, Record<TabKey, { label: string; amount: string }[]>> = {
-  incomes: {
-    today: [
-      { label: 'Продажба #1042', amount: '120.00 €' },
-      { label: 'Продажба #1043', amount: '85.50 €' },
-      { label: 'Продажба #1044', amount: '200.00 €' },
-    ],
-    week: [
-      { label: 'Понеделник', amount: '540.00 €' },
-      { label: 'Вторник',    amount: '320.00 €' },
-      { label: 'Сряда',      amount: '410.00 €' },
-      { label: 'Четвъртък',  amount: '290.00 €' },
-      { label: 'Петък',      amount: '680.00 €' },
-    ],
-    month: [
-      { label: 'Януари',   amount: '4 200.00 €' },
-      { label: 'Февруари', amount: '3 850.00 €' },
-      { label: 'Март',     amount: '5 100.00 €' },
-    ],
-  },
-  expenses: {
-    today: [
-      { label: 'Доставка материали', amount: '55.00 €' },
-      { label: 'Комунални услуги',   amount: '30.00 €' },
-    ],
-    week: [
-      { label: 'Понеделник', amount: '120.00 €' },
-      { label: 'Вторник',    amount: '95.00 €' },
-      { label: 'Сряда',      amount: '140.00 €' },
-      { label: 'Четвъртък',  amount: '60.00 €' },
-      { label: 'Петък',      amount: '180.00 €' },
-    ],
-    month: [
-      { label: 'Януари',   amount: '1 100.00 €' },
-      { label: 'Февруари', amount: '980.00 €' },
-      { label: 'Март',     amount: '1 340.00 €' },
-    ],
-  },
-  profit: {
-    today: [
-      { label: 'Нетна печалба днес', amount: '320.50 €' },
-      { label: 'Марж',               amount: '42%' },
-    ],
-    week: [
-      { label: 'Понеделник', amount: '420.00 €' },
-      { label: 'Вторник',    amount: '225.00 €' },
-      { label: 'Сряда',      amount: '270.00 €' },
-      { label: 'Четвъртък',  amount: '230.00 €' },
-      { label: 'Петък',      amount: '500.00 €' },
-    ],
-    month: [
-      { label: 'Януари',   amount: '3 100.00 €' },
-      { label: 'Февруари', amount: '2 870.00 €' },
-      { label: 'Март',     amount: '3 760.00 €' },
-    ],
-  },
+interface AdditionalIncomesResponse {
+  incomes: number;
+}
+
+interface ExpensesResponse {
+  total_ad_expenses: number;
+  total_order_expenses: number;
+  total_fuel_expenses: number;
+  total_additional_expenses: number;
+  expenses_by_products: Array<Omit<CategoryProductRow, 'total'> & { total_expenses: number }>;
+}
+
+interface CategoryItem { _id: string; name: string }
+
+const CARD_THEMES: Record<CardKey, { label: string; icon: React.ComponentProps<typeof Ionicons>['name']; iconColor: string; iconBg: string; borderColor: string; valueColor: string }> = {
+  incomes:  { label: 'Приходи',  icon: 'trending-up-outline',   iconColor: '#16A34A', iconBg: '#F0FDF4', borderColor: '#16A34A', valueColor: '#16A34A' },
+  expenses: { label: 'Разходи',  icon: 'trending-down-outline', iconColor: '#DC2626', iconBg: '#FEF2F2', borderColor: '#DC2626', valueColor: '#DC2626' },
+  profit:   { label: 'Печалба',  icon: 'bar-chart-outline',     iconColor: '#6366F1', iconBg: '#EEF2FF', borderColor: '#6366F1', valueColor: '#1C1C2E' },
 };
 
-/* ─── Detail Modal ─── */
-function DetailModal({
-  card,
-  onClose,
+function productLabel(p: { name: string; weight?: number; puffs?: number; flavor?: string; count?: number; category?: string }) {
+  switch (p.category) {
+    case 'Бутилки': return `${p.name}${p.weight ? ` ${p.weight}гр.` : ''}`;
+    case 'Балони': return `${p.name}${p.count ? ` ${p.count}бр.` : ''}`;
+    case 'Вейпове': return `${p.name}${p.puffs ? ` ${p.puffs}k` : ''}`;
+    default: return p.name;
+  }
+}
+
+/* ─── Category Detail Modal ─── */
+interface OtherRow { label: string; amount: number }
+
+function CategoryDetailModal({
+  visible, kind, onClose, products, categories, otherRows,
 }: {
-  card: (typeof STAT_CARDS)[number] | null;
+  visible: boolean;
+  kind: 'incomes' | 'expenses';
   onClose: () => void;
+  products: CategoryProductRow[];
+  categories: string[];
+  otherRows: OtherRow[];
 }) {
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState<TabKey>('today');
   const slideAnim = useRef(new Animated.Value(400)).current;
   const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const theme     = CARD_THEMES[kind];
+  const allTabs   = otherRows.length > 0 ? [...categories, 'Други'] : categories;
+  const [activeTab, setActiveTab] = useState<string>(allTabs[0] ?? '');
+
+  useEffect(() => {
+    if (!activeTab && allTabs.length) setActiveTab(allTabs[0]);
+    if (activeTab && !allTabs.includes(activeTab) && allTabs.length) setActiveTab(allTabs[0]);
+  }, [allTabs.join(',')]);
 
   const open = () => {
     Animated.parallel([
-      Animated.timing(slideAnim, { toValue: 0,   duration: 320, useNativeDriver: true }),
-      Animated.timing(fadeAnim,  { toValue: 1,   duration: 260, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 320, useNativeDriver: true }),
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 260, useNativeDriver: true }),
     ]).start();
   };
 
@@ -145,12 +133,15 @@ function DetailModal({
     ]).start(() => onClose());
   };
 
-  if (!card) return null;
-
-  const rows = DUMMY[card.key][activeTab];
+  const rows = activeTab === 'Други'
+    ? []
+    : products.filter((p) => p.category === activeTab);
+  const totalQty = rows.reduce((s, r) => s + r.quantity, 0);
+  const totalAmt = rows.reduce((s, r) => s + r.total, 0);
+  const otherTotal = otherRows.reduce((s, r) => s + r.amount, 0);
 
   return (
-    <Modal visible transparent statusBarTranslucent onShow={open} onRequestClose={close}>
+    <Modal visible={visible} transparent statusBarTranslucent onShow={open} onRequestClose={close}>
       <Animated.View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', opacity: fadeAnim }}>
         <Pressable style={{ flex: 1 }} onPress={close} />
       </Animated.View>
@@ -162,6 +153,7 @@ function DetailModal({
         paddingBottom: insets.bottom + 16,
         ...shadow.lg,
         transform: [{ translateY: slideAnim }],
+        maxHeight: '88%',
       }}>
         <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 4 }}>
           <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
@@ -174,15 +166,20 @@ function DetailModal({
         }}>
           <View style={{
             width: 40, height: 40, borderRadius: 12,
-            backgroundColor: card.iconBg,
+            backgroundColor: theme.iconBg,
             alignItems: 'center', justifyContent: 'center',
             marginRight: 12,
           }}>
-            <Ionicons name={card.icon} size={20} color={card.iconColor} />
+            <Ionicons name={theme.icon} size={20} color={theme.iconColor} />
           </View>
-          <Text style={{ flex: 1, fontSize: 18, fontWeight: '800', color: colors.textPrimary }}>
-            {card.label}
-          </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.4 }}>
+              {kind === 'incomes' ? 'ПРИХОДИ ПО КАТЕГОРИИ' : 'РАЗХОДИ ПО КАТЕГОРИИ'}
+            </Text>
+            <Text style={{ fontSize: 17, fontWeight: '800', color: colors.textPrimary }}>
+              {theme.label}
+            </Text>
+          </View>
           <TouchableOpacity
             onPress={close}
             style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.bgInput, alignItems: 'center', justifyContent: 'center' }}
@@ -191,44 +188,113 @@ function DetailModal({
           </TouchableOpacity>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingVertical: 14 }}>
-          {TABS.map((tab) => {
-            const isActive = activeTab === tab.key;
+        {/* Tabs */}
+        <ScrollView
+          horizontal showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8, paddingHorizontal: 20, paddingVertical: 14 }}
+        >
+          {allTabs.map((tab) => {
+            const isActive = activeTab === tab;
             return (
               <TouchableOpacity
-                key={tab.key}
-                onPress={() => setActiveTab(tab.key)}
+                key={tab}
+                onPress={() => setActiveTab(tab)}
                 style={{
-                  flex: 1, paddingVertical: 8, borderRadius: 10,
-                  alignItems: 'center',
-                  backgroundColor: isActive ? card.iconColor : colors.bgInput,
+                  paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999,
+                  backgroundColor: isActive ? theme.iconColor : colors.bgInput,
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: '700', color: isActive ? '#fff' : colors.textMuted }}>
-                  {tab.label}
+                <Text style={{ fontSize: 13, fontWeight: '700', color: isActive ? '#fff' : colors.textSecondary }}>
+                  {tab}
                 </Text>
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
 
-        <FlatList
-          data={rows}
-          keyExtractor={(_, i) => String(i)}
-          style={{ maxHeight: 280 }}
-          contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}
-          renderItem={({ item }) => (
-            <View style={{
-              flexDirection: 'row', alignItems: 'center',
-              backgroundColor: colors.bg, borderRadius: 14,
-              paddingHorizontal: 16, paddingVertical: 14,
-            }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: card.iconColor, marginRight: 12 }} />
-              <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>{item.label}</Text>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: card.iconColor }}>{item.amount}</Text>
-            </View>
-          )}
-        />
+        {/* Body */}
+        {activeTab === 'Други' ? (
+          <FlatList
+            data={otherRows}
+            keyExtractor={(_, i) => String(i)}
+            style={{ maxHeight: 360 }}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 14, gap: 8 }}
+            ListFooterComponent={otherRows.length > 1 ? (
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end',
+                marginTop: 4, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.divider,
+              }}>
+                <View style={{ backgroundColor: theme.iconBg, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: theme.iconColor }}>
+                    {otherTotal.toFixed(2)} €
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+            renderItem={({ item }) => (
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                backgroundColor: colors.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+              }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>{item.label}</Text>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: theme.iconColor }}>{item.amount.toFixed(2)} €</Text>
+              </View>
+            )}
+            ListEmptyComponent={(
+              <View style={{ alignItems: 'center', paddingVertical: 30 }}>
+                <Text style={{ color: colors.textMuted, fontSize: 13 }}>Няма налични данни</Text>
+              </View>
+            )}
+          />
+        ) : (
+          <FlatList
+            data={rows}
+            keyExtractor={(item) => item._id}
+            style={{ maxHeight: 360 }}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 14, gap: 8 }}
+            ListFooterComponent={rows.length > 1 ? (
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                marginTop: 4, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.divider,
+              }}>
+                <View style={{ backgroundColor: colors.bgInput, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary }}>{totalQty} бр.</Text>
+                </View>
+                <View style={{ backgroundColor: theme.iconBg, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: theme.iconColor }}>
+                    {totalAmt.toFixed(2)} €
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+            renderItem={({ item }) => {
+              const unit = item.quantity > 0 ? item.total / item.quantity : 0;
+              return (
+                <View style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 10,
+                  backgroundColor: colors.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+                }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }} numberOfLines={1}>
+                      {productLabel(item)}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
+                      {item.quantity} бр. · {unit.toFixed(2)} € / бр.
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: theme.iconColor }}>
+                    {item.total.toFixed(2)} €
+                  </Text>
+                </View>
+              );
+            }}
+            ListEmptyComponent={(
+              <View style={{ alignItems: 'center', paddingVertical: 30 }}>
+                <Text style={{ color: colors.textMuted, fontSize: 13 }}>Няма налични данни</Text>
+              </View>
+            )}
+          />
+        )}
       </Animated.View>
     </Modal>
   );
@@ -407,16 +473,98 @@ export default function DashboardScreen() {
   const user    = useAuthStore((s) => s.user);
   const isAdmin = user?.role === 'Admin' || user?.role === 'Super Admin';
 
-  const [selectedCard, setSelectedCard] = useState<(typeof STAT_CARDS)[number] | null>(null);
-  const [products, setProducts]         = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [period, setPeriod]                       = useState<Period>('lastMonth');
+  const [products, setProducts]                   = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts]     = useState(true);
+  const [incomes, setIncomes]                     = useState<IncomesResponse | null>(null);
+  const [additionalIncomes, setAdditional]        = useState<AdditionalIncomesResponse | null>(null);
+  const [expenses, setExpenses]                   = useState<ExpensesResponse | null>(null);
+  const [categories, setCategories]               = useState<string[]>([]);
+  const [loadingStats, setLoadingStats]           = useState(true);
+  const [openCard, setOpenCard]                   = useState<'incomes' | 'expenses' | null>(null);
 
   useEffect(() => {
     api.get<Product[]>('/api/products')
       .then((res) => setProducts(res.data))
       .catch(() => {})
       .finally(() => setLoadingProducts(false));
+
+    api.get<CategoryItem[]>('/api/categories')
+      .then((res) => setCategories(res.data.map((c) => c.name)))
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    setLoadingStats(true);
+    const params = { period };
+    Promise.all([
+      api.get<IncomesResponse>('/api/incomes', { params }).then((r) => r.data).catch(() => null),
+      isAdmin ? api.get<AdditionalIncomesResponse>('/api/incomes/additional', { params }).then((r) => r.data).catch(() => null) : Promise.resolve(null),
+      isAdmin ? api.get<ExpensesResponse>('/api/expenses', { params }).then((r) => r.data).catch(() => null) : Promise.resolve(null),
+    ]).then(([inc, addInc, exp]) => {
+      setIncomes(inc);
+      setAdditional(addInc);
+      setExpenses(exp);
+    }).finally(() => setLoadingStats(false));
+  }, [period, isAdmin]);
+
+  const totalIncomes = incomes?.incomes ?? 0;
+  const totalExpenses =
+    (expenses?.total_order_expenses ?? 0) +
+    (expenses?.total_fuel_expenses ?? 0) +
+    (expenses?.total_ad_expenses ?? 0) +
+    (expenses?.total_additional_expenses ?? 0);
+  const totalProfit = totalIncomes - totalExpenses;
+
+  const incomesProducts: CategoryProductRow[] = (incomes?.incomes_by_products ?? []).map((p) => ({
+    _id: String(p._id),
+    name: p.name,
+    weight: p.weight,
+    puffs: p.puffs,
+    flavor: p.flavor,
+    count: p.count,
+    category: p.category,
+    quantity: p.quantity,
+    total: p.total_incomes,
+  }));
+
+  const incomesOtherRows: OtherRow[] = (additionalIncomes?.incomes ?? 0) > 0
+    ? [{ label: 'Допълнителни приходи', amount: additionalIncomes!.incomes }]
+    : [];
+
+  const expensesProducts: CategoryProductRow[] = (expenses?.expenses_by_products ?? []).map((p) => ({
+    _id: String(p._id),
+    name: p.name,
+    weight: p.weight,
+    puffs: p.puffs,
+    flavor: p.flavor,
+    count: p.count,
+    category: p.category,
+    quantity: p.quantity,
+    total: p.total_expenses,
+  }));
+
+  const expensesOtherRows: OtherRow[] = [
+    expenses?.total_fuel_expenses && expenses.total_fuel_expenses > 0
+      ? { label: 'Гориво', amount: expenses.total_fuel_expenses }
+      : null,
+    expenses?.total_ad_expenses && expenses.total_ad_expenses > 0
+      ? { label: 'Реклами', amount: expenses.total_ad_expenses }
+      : null,
+    expenses?.total_additional_expenses && expenses.total_additional_expenses > 0
+      ? { label: 'Допълнителни', amount: expenses.total_additional_expenses }
+      : null,
+  ].filter(Boolean) as OtherRow[];
+
+  const cards: { key: CardKey; value: number; clickable: boolean }[] = isAdmin
+    ? [
+        { key: 'incomes',  value: totalIncomes,  clickable: true  },
+        { key: 'expenses', value: totalExpenses, clickable: true  },
+        { key: 'profit',   value: totalProfit,   clickable: false },
+      ]
+    : [
+        { key: 'incomes', value: totalIncomes, clickable: true },
+      ];
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -427,35 +575,68 @@ export default function DashboardScreen() {
           contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
         >
+          {/* Period chips */}
+          <ScrollView
+            horizontal showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingBottom: 12 }}
+          >
+            {PERIODS.map((p) => {
+              const active = period === p.key;
+              return (
+                <TouchableOpacity
+                  key={p.key}
+                  onPress={() => setPeriod(p.key)}
+                  style={{
+                    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999,
+                    backgroundColor: active ? colors.primary : '#fff',
+                    ...shadow.sm,
+                  }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: active ? '#fff' : colors.textSecondary }}>
+                    {p.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
           {/* Stat cards */}
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
-            {STAT_CARDS.map((card) => (
-              <TouchableOpacity
-                key={card.key}
-                activeOpacity={0.75}
-                onPress={() => setSelectedCard(card)}
-                style={{
-                  flex: 1, backgroundColor: '#fff', borderRadius: 18,
-                  padding: 14, borderTopWidth: 3, borderTopColor: card.borderColor,
-                  ...shadow.sm,
-                }}
-              >
-                <View style={{
-                  width: 36, height: 36, borderRadius: 10,
-                  backgroundColor: card.iconBg,
-                  alignItems: 'center', justifyContent: 'center',
-                  marginBottom: 10,
-                }}>
-                  <Ionicons name={card.icon} size={18} color={card.iconColor} />
-                </View>
-                <Text style={{ fontSize: 18, fontWeight: '800', color: colors.textPrimary, marginBottom: 2 }}>
-                  {card.value}
-                </Text>
-                <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textMuted, letterSpacing: 0.3 }}>
-                  {card.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {cards.map(({ key, value, clickable }) => {
+              const theme = CARD_THEMES[key];
+              return (
+                <TouchableOpacity
+                  key={key}
+                  activeOpacity={clickable ? 0.7 : 1}
+                  onPress={() => clickable ? setOpenCard(key as 'incomes' | 'expenses') : null}
+                  disabled={!clickable}
+                  style={{
+                    flex: 1, backgroundColor: '#fff', borderRadius: 18,
+                    padding: 14, borderTopWidth: 3, borderTopColor: theme.borderColor,
+                    ...shadow.sm,
+                  }}
+                >
+                  <View style={{
+                    width: 36, height: 36, borderRadius: 10,
+                    backgroundColor: theme.iconBg,
+                    alignItems: 'center', justifyContent: 'center',
+                    marginBottom: 10,
+                  }}>
+                    <Ionicons name={theme.icon} size={18} color={theme.iconColor} />
+                  </View>
+                  {loadingStats ? (
+                    <View style={{ height: 22, marginBottom: 4, backgroundColor: colors.bgInput, borderRadius: 6 }} />
+                  ) : (
+                    <Text style={{ fontSize: 17, fontWeight: '800', color: theme.valueColor, marginBottom: 2, letterSpacing: -0.3 }} numberOfLines={1}>
+                      {value.toFixed(2)} €
+                    </Text>
+                  )}
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.4, textTransform: 'uppercase' }}>
+                    {theme.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* Stock table */}
@@ -494,9 +675,14 @@ export default function DashboardScreen() {
 
       <BottomTabBar />
 
-      {selectedCard && (
-        <DetailModal card={selectedCard} onClose={() => setSelectedCard(null)} />
-      )}
+      <CategoryDetailModal
+        visible={openCard !== null}
+        kind={openCard ?? 'incomes'}
+        onClose={() => setOpenCard(null)}
+        products={openCard === 'expenses' ? expensesProducts : incomesProducts}
+        categories={categories}
+        otherRows={openCard === 'expenses' ? expensesOtherRows : incomesOtherRows}
+      />
     </View>
   );
 }
