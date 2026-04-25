@@ -16,6 +16,8 @@ interface AuthState {
   logout: () => Promise<void>;
 }
 
+let isLoggingOut = false;
+
 export const useAuthStore = create<AuthState>((set, get) => {
   unauthorizedEmitter.subscribe(() => get().logout());
 
@@ -62,11 +64,20 @@ export const useAuthStore = create<AuthState>((set, get) => {
     },
 
     logout: async () => {
-      await unregisterPushToken().catch(console.error);
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-      await SecureStore.deleteItemAsync('auth_user');
-      set({ token: null, user: null });
-      router.replace('/(auth)/login');
+      if (isLoggingOut) return;
+      isLoggingOut = true;
+      try {
+        // Only attempt server-side push-token cleanup while we still have a token.
+        if (get().token) {
+          await unregisterPushToken().catch(console.error);
+        }
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await SecureStore.deleteItemAsync('auth_user');
+        set({ token: null, user: null });
+        router.replace('/(auth)/login');
+      } finally {
+        isLoggingOut = false;
+      }
     },
   };
 });

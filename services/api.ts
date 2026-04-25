@@ -24,6 +24,7 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
+      console.warn('[api] 401 on', error.config?.method?.toUpperCase(), error.config?.url);
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       // authStore.logout() is called from the store itself via the 401 event
       // We use a simple event emitter pattern to avoid circular imports
