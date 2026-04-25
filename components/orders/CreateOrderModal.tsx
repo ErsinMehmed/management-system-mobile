@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Modal, View, Text, TextInput, TouchableOpacity,
-  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
+  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, Image,
 } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { colors, shadow } from '@/constants/theme';
@@ -89,11 +89,24 @@ function ProductPicker({ label, products, value, onSelect, disabled }: {
                 onPress={() => { onSelect(p._id); setOpen(false); }}
                 style={{
                   padding: 16, borderBottomWidth: 1, borderBottomColor: colors.divider,
-                  flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                  flexDirection: 'row', alignItems: 'center', gap: 12,
                   backgroundColor: value === p._id ? colors.primaryLight : 'transparent',
                 }}
               >
-                <Text style={{ color: colors.textPrimary, fontSize: 15, flex: 1 }}>{productTitle(p)}</Text>
+                {p.image_url ? (
+                  <Image source={{ uri: p.image_url }} style={{ width: 40, height: 40, borderRadius: 8 }} resizeMode="cover" />
+                ) : (
+                  <View style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: colors.bgInput, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="cube-outline" size={18} color={colors.textMuted} />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }} numberOfLines={2}>{productTitle(p)}</Text>
+                  {(() => {
+                    const unit = p.sell_prices?.[0] ?? p.price;
+                    return unit ? <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>{unit.toFixed(2)} €</Text> : null;
+                  })()}
+                </View>
                 {value === p._id && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
               </TouchableOpacity>
             ))}

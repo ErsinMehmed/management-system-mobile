@@ -320,32 +320,20 @@ export default function OrdersTab({ onCreatePress, onRejection }: Props) {
             </Text>
           </View>
 
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+          {!!user && (
             <TouchableOpacity
-              onPress={() => loadOrders()}
+              onPress={onCreatePress}
               style={{
-                width: 38, height: 38, borderRadius: 12,
-                backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-                ...shadow.sm,
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                backgroundColor: '#6366F1', borderRadius: 12,
+                paddingHorizontal: 14, paddingVertical: 9,
+                ...shadow.lg,
               }}
             >
-              <Ionicons name="refresh-outline" size={17} color={colors.textSecondary} />
+              <Ionicons name="add" size={18} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Добави</Text>
             </TouchableOpacity>
-            {!!user && (
-              <TouchableOpacity
-                onPress={onCreatePress}
-                style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 6,
-                  backgroundColor: '#6366F1', borderRadius: 12,
-                  paddingHorizontal: 14, paddingVertical: 9,
-                  ...shadow.lg,
-                }}
-              >
-                <Ionicons name="add" size={18} color="#fff" />
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Добави</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          )}
         </View>
       }
       refreshControl={
