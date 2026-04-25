@@ -90,26 +90,45 @@ function EditOrderModal({ visible, order, products, isSuperAdmin, onClose, onSuc
   const selectedProduct  = products.find((p) => p._id === productId);
   const selectedProduct2 = products.find((p) => p._id === product2Id);
 
+  // Pulls a tier value (sell or seller price). Clamps qty to the last entry
+  // so that orders above the configured tiers stay on the bulk price instead
+  // of leaving stale data (or worse, falling back to the load/cost price).
+  const tierAt = (arr: number[] | undefined, q: number): number | null => {
+    if (!arr?.length) return null;
+    const idx = Math.min(Math.max(0, q - 1), arr.length - 1);
+    const v = arr[idx];
+    return v !== undefined && v !== null ? Number(v) : null;
+  };
+
   const handleProductSelect = (id: string) => {
     const p = products.find((x) => x._id === id);
     const q = parseInt(qty) || 1;
     setProductId(id); setProductPickerOpen(false);
-    if (p?.sell_prices?.[q - 1] !== undefined) setPrice(String(p.sell_prices[q - 1]));
-    if (isSuperAdmin && (p as any)?.seller_prices?.[q - 1] !== undefined) setPayout(String((p as any).seller_prices[q - 1]));
+    const sell = tierAt(p?.sell_prices, q);
+    if (sell !== null) setPrice(String(sell));
+    if (isSuperAdmin) {
+      const seller = tierAt((p as any)?.seller_prices, q);
+      if (seller !== null) setPayout(String(seller));
+    }
   };
 
   const handleQtyChange = (v: string) => {
     setQty(v);
     const q = parseInt(v) || 1;
-    if (selectedProduct?.sell_prices?.[q - 1] !== undefined) setPrice(String(selectedProduct.sell_prices[q - 1]));
-    if (isSuperAdmin && (selectedProduct as any)?.seller_prices?.[q - 1] !== undefined) setPayout(String((selectedProduct as any).seller_prices[q - 1]));
+    const sell = tierAt(selectedProduct?.sell_prices, q);
+    if (sell !== null) setPrice(String(sell));
+    if (isSuperAdmin) {
+      const seller = tierAt((selectedProduct as any)?.seller_prices, q);
+      if (seller !== null) setPayout(String(seller));
+    }
   };
 
   const handleProduct2Select = (id: string) => {
     const p = products.find((x) => x._id === id);
     const q = parseInt(qty2) || 1;
     setProduct2Id(id); setProduct2PickerOpen(false);
-    if (p?.sell_prices?.[q - 1] !== undefined) setPrice2(String(p.sell_prices[q - 1]));
+    const sell = tierAt(p?.sell_prices, q);
+    if (sell !== null) setPrice2(String(sell));
   };
 
   const handleSave = async () => {

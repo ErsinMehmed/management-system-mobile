@@ -13,6 +13,17 @@ import type { Product, UserListItem } from '@/types';
 
 interface Props { visible: boolean; onClose: () => void; onSuccess?: () => void }
 
+// Returns the configured sell price tier for an exact quantity. If the qty
+// is outside the sell_prices array (or no array is set), returns null so
+// the price field is cleared rather than falling back to a bulk tier or
+// the product's load/cost price.
+function sellPriceForQty(p: Product, qty: number): number | null {
+  const sellPrices = p.sell_prices;
+  if (!sellPrices?.length || qty < 1 || qty > sellPrices.length) return null;
+  const tier = sellPrices[qty - 1];
+  return tier !== undefined && tier !== null ? Number(tier) : null;
+}
+
 function Field({
   label, value, onChangeText, placeholder, keyboardType, multiline, disabled,
 }: {
@@ -200,8 +211,8 @@ export default function CreateOrderModal({ visible, onClose, onSuccess }: Props)
     const p = products.find((x) => x._id === orderData.product);
     if (!p) return;
     const qty = parseInt(orderData.quantity) || 1;
-    const price = p.sell_prices?.[qty - 1] ?? p.price ?? 0;
-    if (price) setOrderData({ price: String(price) });
+    const price = sellPriceForQty(p, qty);
+    setOrderData({ price: price !== null ? String(price) : '' });
   }, [orderData.product, orderData.quantity]);
 
   useEffect(() => {
@@ -209,8 +220,8 @@ export default function CreateOrderModal({ visible, onClose, onSuccess }: Props)
     const p = products.find((x) => x._id === orderData.product2);
     if (!p) return;
     const qty = parseInt(orderData.quantity2) || 1;
-    const price = p.sell_prices?.[qty - 1] ?? p.price ?? 0;
-    if (price) setOrderData({ price2: String(price) });
+    const price = sellPriceForQty(p, qty);
+    setOrderData({ price2: price !== null ? String(price) : '' });
   }, [orderData.product2, orderData.quantity2]);
 
   const handleSubmit = async () => {
