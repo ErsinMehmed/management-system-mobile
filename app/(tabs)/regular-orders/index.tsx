@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, TextInput,
   Modal, ActivityIndicator, Alert, RefreshControl,
-  KeyboardAvoidingView, Platform, FlatList,
+  KeyboardAvoidingView, Platform, FlatList, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +23,8 @@ interface ProductRef {
   count?: number;
   price?: number;
   units_per_box?: number;
+  image_url?: string;
+  availability?: number;
 }
 
 interface Order {
@@ -32,6 +34,14 @@ interface Order {
   price: number;
   message?: string;
   date: string;
+  product: ProductRef | string;
+}
+
+interface OrderTemplate {
+  _id: string;
+  name: string;
+  quantity: number;
+  message?: string;
   product: ProductRef | string;
 }
 
@@ -116,11 +126,18 @@ function ProductPickerModal({ visible, products, selectedId, onSelect, onClose }
               onPress={() => onSelect(p)}
               style={{
                 padding: 16, borderBottomWidth: 1, borderBottomColor: colors.divider,
-                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                flexDirection: 'row', alignItems: 'center', gap: 12,
                 backgroundColor: selectedId === p._id ? colors.primaryLight : 'transparent',
               }}
             >
-              <View style={{ flex: 1, marginRight: 8 }}>
+              {p.image_url ? (
+                <Image source={{ uri: p.image_url }} style={{ width: 40, height: 40, borderRadius: 8 }} resizeMode="cover" />
+              ) : (
+                <View style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: colors.bgInput, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="cube-outline" size={18} color={colors.textMuted} />
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '600' }} numberOfLines={2}>{productLabel(p)}</Text>
                 {p.price ? <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>{p.price.toFixed(2)} €</Text> : null}
               </View>
@@ -135,23 +152,115 @@ function ProductPickerModal({ visible, products, selectedId, onSelect, onClose }
 }
 
 /* ─── Create Modal ─── */
-function CreateOrderModal({ visible, onClose, onSuccess, products, onOpenPicker, selectedProduct }: {
+function CreateOrderModal({ visible, onClose, onSuccess, products, selectedProduct, setSelectedProduct }: {
   visible: boolean; onClose: () => void; onSuccess: () => void; products: ProductRef[];
-  onOpenPicker: () => void; selectedProduct: ProductRef | null;
+  selectedProduct: ProductRef | null; setSelectedProduct: (p: ProductRef | null) => void;
 }) {
   const [quantity, setQuantity] = useState('');
+  const [boxCount, setBoxCount] = useState('');
   const [price, setPrice] = useState('');
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  const total = (parseFloat(quantity) || 0) * (parseFloat(price) || 0);
+  // Templates
+  const [templates, setTemplates] = useState<OrderTemplate[]>([]);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
-  // Auto-fill price when product changes
+  const unitsPerBox = selectedProduct?.units_per_box || 1;
+
+  const fetchTemplates = async () => {
+    try {
+      const res = await api.get<OrderTemplate[]>('/api/orders/templates');
+      setTemplates(Array.isArray(res.data) ? res.data : []);
+    } catch { /* ignore */ }
+  };
+
   useEffect(() => {
-    if (selectedProduct?.price) setPrice(selectedProduct.price.toString());
-  }, [selectedProduct?._id]);
+    if (visible) fetchTemplates();
+  }, [visible]);
 
-  const reset = () => { setQuantity(''); setPrice(''); setMessage(''); };
+  const applyTemplate = (tpl: OrderTemplate) => {
+    const productId = typeof tpl.product === 'object' ? tpl.product._id : tpl.product;
+    const fromList = products.find((p) => p._id === productId);
+    const populated = typeof tpl.product === 'object' ? (tpl.product as ProductRef) : null;
+    const product = fromList ?? populated;
+    if (!product) return;
+    setSelectedProduct(product);
+    const upb = product.units_per_box || 1;
+    setQuantity(String(tpl.quantity));
+    setBoxCount(tpl.quantity > 0 ? (tpl.quantity / upb).toFixed(1).replace(/\.0$/, '') : '');
+    setMessage(tpl.message || '');
+  };
+
+  const deleteTemplate = (id: string) => {
+    Alert.alert('Изтрий шаблон', 'Сигурен ли си?', [
+      { text: 'Отмени', style: 'cancel' },
+      {
+        text: 'Изтрий',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.delete(`/api/orders/templates?id=${id}`);
+            setTemplates((prev) => prev.filter((t) => t._id !== id));
+          } catch {
+            Alert.alert('Грешка', 'Неуспешно изтриване.');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!templateName.trim() || !selectedProduct || !quantity) return;
+    setSavingTemplate(true);
+    try {
+      await api.post('/api/orders/templates', {
+        name: templateName.trim(),
+        product: selectedProduct._id,
+        quantity: parseFloat(quantity),
+        message: message || '',
+      });
+      setTemplateName('');
+      setShowSaveTemplate(false);
+      await fetchTemplates();
+    } catch (e: any) {
+      Alert.alert('Грешка', e?.response?.data?.message ?? 'Неуспешно запазване.');
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  // Two-way sync between Бройки ↔ Кашони (only when the user actually edits one)
+  const handleQtyChange = (val: string) => {
+    setQuantity(val);
+    const n = parseFloat(val);
+    setBoxCount(n > 0 ? (n / unitsPerBox).toFixed(1).replace(/\.0$/, '') : '');
+  };
+
+  const handleBoxChange = (val: string) => {
+    setBoxCount(val);
+    const n = parseFloat(val);
+    setQuantity(n > 0 ? String(Math.round(n * unitsPerBox)) : '');
+  };
+
+  // Auto-calculate price field only after a quantity is entered (qty × product unit price).
+  // Until then leave the field empty.
+  useEffect(() => {
+    const qty = parseFloat(quantity);
+    if (selectedProduct?.price && qty > 0) {
+      setPrice((qty * selectedProduct.price).toFixed(2));
+    } else {
+      setPrice('');
+    }
+  }, [selectedProduct?._id, quantity]);
+
+  const reset = () => {
+    setQuantity(''); setBoxCount(''); setPrice(''); setMessage('');
+    setShowSaveTemplate(false); setTemplateName('');
+  };
   const handleClose = () => { reset(); onClose(); };
 
   const handleSubmit = async () => {
@@ -161,11 +270,12 @@ function CreateOrderModal({ visible, onClose, onSuccess, products, onOpenPicker,
     }
     setSaving(true);
     try {
+      const totalAmount = parseFloat(price);
       await api.post('/api/orders', {
         product: selectedProduct._id,
         quantity: parseFloat(quantity),
-        price: parseFloat(price),
-        total_amount: total,
+        price: selectedProduct.price ?? 0,
+        total_amount: totalAmount,
         message: message || undefined,
         date: new Date(),
       });
@@ -192,11 +302,41 @@ function CreateOrderModal({ visible, onClose, onSuccess, products, onOpenPicker,
           </View>
 
           <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }} keyboardShouldPersistTaps="handled">
+            {/* Templates row */}
+            {templates.length > 0 && (
+              <View style={{ gap: 8 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4 }}>ШАБЛОНИ</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 4 }}>
+                  {templates.map((tpl) => (
+                    <View
+                      key={tpl._id}
+                      style={{
+                        flexDirection: 'row', alignItems: 'center',
+                        backgroundColor: colors.bgInput, borderRadius: 999,
+                        paddingLeft: 12, paddingVertical: 8,
+                      }}
+                    >
+                      <TouchableOpacity onPress={() => applyTemplate(tpl)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="bookmark" size={12} color={colors.primary} />
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textPrimary }} numberOfLines={1}>
+                          {tpl.name}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: colors.textMuted }}>· {tpl.quantity} бр.</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => deleteTemplate(tpl._id)} style={{ paddingHorizontal: 10, paddingVertical: 2 }}>
+                        <Ionicons name="close" size={14} color={colors.textMuted} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
             {/* Product picker trigger */}
             <View style={{ gap: 6 }}>
               <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4 }}>ПРОДУКТ *</Text>
               <TouchableOpacity
-                onPress={onOpenPicker}
+                onPress={() => setPickerOpen(true)}
                 style={{
                   backgroundColor: colors.bgInput, borderRadius: 14,
                   paddingHorizontal: 14, paddingVertical: 13,
@@ -209,51 +349,75 @@ function CreateOrderModal({ visible, onClose, onSuccess, products, onOpenPicker,
                 </Text>
                 <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
               </TouchableOpacity>
+
+              <ProductPickerModal
+                visible={pickerOpen}
+                products={products}
+                selectedId={selectedProduct?._id ?? ''}
+                onSelect={(p) => { setSelectedProduct(p); setPickerOpen(false); }}
+                onClose={() => setPickerOpen(false)}
+              />
             </View>
 
-            {/* Quantity + Price row */}
+            {/* Quantity + Boxes row */}
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <View style={{ flex: 1, gap: 6 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4 }}>КОЛИЧЕСТВО *</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4 }}>БРОЙКИ *</Text>
                 <TextInput
                   style={{ backgroundColor: colors.bgInput, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: colors.textPrimary }}
                   value={quantity}
-                  onChangeText={setQuantity}
+                  onChangeText={handleQtyChange}
                   placeholder="0"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="decimal-pad"
+                  editable={!!selectedProduct}
                 />
               </View>
-              <View style={{ flex: 1, gap: 6 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4 }}>ЦЕНА (€) *</Text>
+              <View style={{ flex: 1, gap: 6, opacity: selectedProduct ? 1 : 0.4 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4 }}>
+                  КАШОНИ {selectedProduct ? `(×${unitsPerBox})` : ''}
+                </Text>
                 <TextInput
                   style={{ backgroundColor: colors.bgInput, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: colors.textPrimary }}
-                  value={price}
-                  onChangeText={setPrice}
-                  placeholder="0.00"
+                  value={boxCount}
+                  onChangeText={handleBoxChange}
+                  placeholder="0"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="decimal-pad"
+                  editable={!!selectedProduct}
                 />
               </View>
             </View>
 
-            {/* Total preview */}
-            {total > 0 && (
-              <View style={{ backgroundColor: colors.primaryLight, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary }}>Обща сума</Text>
-                <Text style={{ fontSize: 18, fontWeight: '800', color: colors.primary }}>{total.toFixed(2)} €</Text>
-              </View>
-            )}
+            {/* Price */}
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4 }}>ЦЕНА (€) *</Text>
+              <TextInput
+                style={{ backgroundColor: colors.bgInput, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: colors.textPrimary }}
+                value={price}
+                onChangeText={setPrice}
+                placeholder="0.00"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="decimal-pad"
+              />
+            </View>
 
             {/* Message */}
             <View style={{ gap: 6 }}>
               <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4 }}>БЕЛЕЖКА</Text>
               <TextInput
-                style={{ backgroundColor: colors.bgInput, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: colors.textPrimary }}
+                style={{
+                  backgroundColor: colors.bgInput, borderRadius: 14,
+                  paddingHorizontal: 14, paddingVertical: 12,
+                  fontSize: 15, color: colors.textPrimary,
+                  minHeight: 100, textAlignVertical: 'top',
+                }}
                 value={message}
                 onChangeText={setMessage}
                 placeholder="Бележка..."
                 placeholderTextColor={colors.textMuted}
+                multiline
+                numberOfLines={4}
               />
             </View>
 
@@ -266,6 +430,48 @@ function CreateOrderModal({ visible, onClose, onSuccess, products, onOpenPicker,
                 ? <ActivityIndicator color={colors.primary} />
                 : <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Добави поръчка</Text>}
             </TouchableOpacity>
+
+            {/* Save as template */}
+            {selectedProduct && quantity ? (
+              !showSaveTemplate ? (
+                <TouchableOpacity
+                  onPress={() => setShowSaveTemplate(true)}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8 }}
+                >
+                  <Ionicons name="bookmark-outline" size={14} color={colors.textMuted} />
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textMuted }}>Запази като шаблон</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: colors.bgInput, borderRadius: 14, padding: 8 }}>
+                  <TextInput
+                    style={{ flex: 1, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, color: colors.textPrimary }}
+                    value={templateName}
+                    onChangeText={setTemplateName}
+                    placeholder="Име на шаблон"
+                    placeholderTextColor={colors.textMuted}
+                  />
+                  <TouchableOpacity
+                    onPress={() => { setShowSaveTemplate(false); setTemplateName(''); }}
+                    style={{ paddingHorizontal: 8, paddingVertical: 8 }}
+                  >
+                    <Ionicons name="close" size={16} color={colors.textMuted} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleSaveTemplate}
+                    disabled={!templateName.trim() || savingTemplate}
+                    style={{
+                      backgroundColor: !templateName.trim() ? colors.bgElevated : colors.primary,
+                      borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8,
+                    }}
+                  >
+                    {savingTemplate
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Запази</Text>}
+                  </TouchableOpacity>
+                </View>
+              )
+            ) : null}
+
             <View style={{ height: 16 }} />
           </ScrollView>
         </View>
@@ -286,7 +492,6 @@ export default function RegularOrdersScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [createVisible, setCreateVisible] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductRef | null>(null);
   const pageRef = useRef(1);
 
@@ -302,8 +507,8 @@ export default function RegularOrdersScreen() {
 
   const fetchProducts = async () => {
     try {
-      const res = await api.get('/api/products?per_page=100');
-      setProducts(res.data.items ?? []);
+      const res = await api.get<ProductRef[]>('/api/products');
+      setProducts((res.data ?? []).filter((p: any) => !p.hidden));
     } catch { /* ignore */ }
   };
 
@@ -395,20 +600,12 @@ export default function RegularOrdersScreen() {
       <BottomTabBar />
 
       <CreateOrderModal
-        visible={createVisible && !pickerOpen}
+        visible={createVisible}
         onClose={() => { setCreateVisible(false); setSelectedProduct(null); }}
         onSuccess={() => { setCreateVisible(false); setSelectedProduct(null); fetchOrders(1); }}
         products={products}
-        onOpenPicker={() => setPickerOpen(true)}
         selectedProduct={selectedProduct}
-      />
-
-      <ProductPickerModal
-        visible={pickerOpen}
-        products={products}
-        selectedId={selectedProduct?._id ?? ''}
-        onSelect={(p) => { setSelectedProduct(p); setPickerOpen(false); }}
-        onClose={() => setPickerOpen(false)}
+        setSelectedProduct={setSelectedProduct}
       />
     </View>
   );

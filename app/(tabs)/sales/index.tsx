@@ -117,9 +117,9 @@ function ProductPicker({ products, value, onSelect }: {
 }
 
 /* ─── Field ─── */
-function Field({ label, value, onChangeText, placeholder, keyboardType, disabled }: {
+function Field({ label, value, onChangeText, placeholder, keyboardType, disabled, multiline }: {
   label: string; value: string; onChangeText: (v: string) => void;
-  placeholder?: string; keyboardType?: any; disabled?: boolean;
+  placeholder?: string; keyboardType?: any; disabled?: boolean; multiline?: boolean;
 }) {
   return (
     <View style={{ gap: 6, opacity: disabled ? 0.4 : 1 }}>
@@ -130,6 +130,7 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, disabled
           paddingHorizontal: 14, paddingVertical: 12,
           fontSize: 15, color: colors.textPrimary,
           borderWidth: 1.5, borderColor: 'transparent',
+          ...(multiline ? { minHeight: 100, textAlignVertical: 'top' } : null),
         }}
         value={value}
         onChangeText={onChangeText}
@@ -137,6 +138,8 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, disabled
         placeholderTextColor={colors.textMuted}
         keyboardType={keyboardType}
         editable={!disabled}
+        multiline={multiline}
+        numberOfLines={multiline ? 4 : undefined}
       />
     </View>
   );
@@ -261,7 +264,7 @@ function CreateSaleModal({ visible, onClose, onSuccess, products }: {
             </View>
 
             <Field label="ДОПЪЛНИТЕЛНИ РАЗХОДИ (€)" value={additionalCosts} onChangeText={setAdditionalCosts} placeholder="0.00" keyboardType="decimal-pad" />
-            <Field label="СЪОБЩЕНИЕ" value={message} onChangeText={setMessage} placeholder="Бележка..." />
+            <Field label="СЪОБЩЕНИЕ" value={message} onChangeText={setMessage} placeholder="Бележка..." multiline />
 
             <View style={{ height: 1 }} />
             <TouchableOpacity
